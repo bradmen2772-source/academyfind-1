@@ -3,11 +3,13 @@
 import { useState, useEffect } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { Loader2, CheckCircle2, HeadphonesIcon, X } from "lucide-react";
+import { Loader2, CheckCircle2, HeadphonesIcon, X, Lock, ArrowRight } from "lucide-react";
 import { requestGlobalCallback } from "@/lib/User/user/global-callback";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { buildAuthHref } from "@/lib/auth/redirect-utils";
+import { authClient } from "@/lib/auth/auth-client";
+import { INDIAN_PHONE_REGEX } from "@/lib/phone-validation";
 
 export interface GlobalCallbackFABProps {
     defaultName?: string | null;
@@ -16,11 +18,25 @@ export interface GlobalCallbackFABProps {
 
 export default function GlobalCallbackFAB({ defaultName, defaultPhone }: GlobalCallbackFABProps) {
     const pathname = usePathname();
+    const { data: session } = authClient.useSession();
+    const isLoggedIn = Boolean(session?.user);
+
     const [isOpen, setIsOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
     const [error, setError] = useState("");
     const [currentUrl, setCurrentUrl] = useState("");
+
+    const [phoneVal, setPhoneVal] = useState(defaultPhone || "");
+    const [nameVal, setNameVal] = useState(defaultName || "");
+
+    // Pre-fill user data when session arrives
+    useEffect(() => {
+        if (session?.user) {
+            if (session.user.name && !nameVal) setNameVal(session.user.name);
+            if ((session.user as any).phone && !phoneVal) setPhoneVal((session.user as any).phone);
+        }
+    }, [session]);
 
     // Capture the URL so admins know where the user was stuck
     useEffect(() => {
@@ -36,6 +52,18 @@ export default function GlobalCallbackFAB({ defaultName, defaultPhone }: GlobalC
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+
+        if (!isLoggedIn) {
+            window.location.href = buildAuthHref("/login", pathname);
+            return;
+        }
+
+        const cleanPhone = phoneVal.replace(/\D/g, "");
+        if (!INDIAN_PHONE_REGEX.test(cleanPhone)) {
+            setError("Please enter a valid 10-digit Indian mobile number (e.g. 9876543210).");
+            return;
+        }
+
         setIsSubmitting(true);
         setError("");
 
@@ -57,7 +85,7 @@ export default function GlobalCallbackFAB({ defaultName, defaultPhone }: GlobalC
                 {/* 🚀 FAB Button acts as the trigger */}
                 <PopoverTrigger asChild>
                     <button
-                        className="flex items-center justify-center gap-2 bg-amber-400 hover:bg-amber-500 text-white rounded-full p-4 md:px-5 md:py-3 shadow-2xl hover:scale-105 transition-all duration-300 group"
+                        className="flex items-center justify-center gap-2 bg-amber-400 hover:bg-amber-500 text-white rounded-full p-4 md:px-5 md:py-3 shadow-2xl hover:scale-105 transition-all duration-300 group cursor-pointer"
                     >
                         <div className="relative">
                             {/* 🚀 Icon swaps to 'X' when open */}
@@ -87,7 +115,7 @@ export default function GlobalCallbackFAB({ defaultName, defaultPhone }: GlobalC
                     <div className="bg-amber-400 p-5 text-white text-center relative shrink-0">
                         <button 
                             onClick={() => setIsOpen(false)}
-                            className="absolute top-3 right-3 p-1.5 rounded-full hover:bg-amber-500/50 transition-colors"
+                            className="absolute top-3 right-3 p-1.5 rounded-full hover:bg-amber-500/50 transition-colors cursor-pointer"
                         >
                             <X className="w-5 h-5 text-white" />
                         </button>
@@ -98,7 +126,7 @@ export default function GlobalCallbackFAB({ defaultName, defaultPhone }: GlobalC
                         </p>
                     </div>
 
-                    <div className="p-5 bg-white overflow-y-auto">
+                    <div className="p-5 bg-white overflow-y-auto relative">
                         {isSuccess ? (
                             <div className="text-center py-6 animate-in zoom-in duration-300">
                                 <CheckCircle2 className="w-14 h-14 text-emerald-500 mx-auto mb-3" />
@@ -108,61 +136,99 @@ export default function GlobalCallbackFAB({ defaultName, defaultPhone }: GlobalC
                                 <div className="mt-6 pt-6 border-t border-slate-100">
                                     <p className="text-sm font-medium text-slate-600 mb-3">Want to explore on your own?</p>
                                     <Link href={buildAuthHref("/login", pathname)} onClick={() => setIsOpen(false)}>
-                                        <Button className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl">
+                                        <Button className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl cursor-pointer">
                                             Login / Sign Up
                                         </Button>
                                     </Link>
                                 </div>
                             </div>
                         ) : (
-                            <form onSubmit={handleSubmit} className="space-y-4">
-                                {error && <div className="text-xs text-red-500 bg-red-50 p-3 rounded-xl border border-red-100">{error}</div>}
+                            <div className="relative">
+                                {/* ── Login Overlay for unauthenticated users ── */}
+                                {!isLoggedIn && (
+                                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-3 bg-white/80 backdrop-blur-[2px] rounded-2xl text-center">
+                                        <div className="w-11 h-11 bg-amber-500/10 text-amber-600 rounded-xl flex items-center justify-center mb-2 shadow-inner ring-1 ring-amber-500/20">
+                                            <Lock className="w-5 h-5" />
+                                        </div>
+                                        <h4 className="text-sm font-extrabold text-slate-900">Login to Request Callback</h4>
+                                        <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                                            Sign in to connect directly with our expert counseling team.
+                                        </p>
+                                        <Link
+                                            href={buildAuthHref("/login", pathname)}
+                                            onClick={() => setIsOpen(false)}
+                                            className="w-full mt-3.5"
+                                        >
+                                            <Button className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl shadow-md shadow-amber-500/20 py-4 text-xs flex items-center justify-center gap-1.5 cursor-pointer">
+                                                Login to Continue <ArrowRight className="w-3.5 h-3.5" />
+                                            </Button>
+                                        </Link>
+                                    </div>
+                                )}
 
-                                <div className="space-y-3">
-                                    <div>
-                                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Name *</label>
-                                        <input
-                                            required
-                                            type="text"
-                                            name="name"
-                                            placeholder="Rahul Kumar"
-                                            defaultValue={defaultName || ""}
-                                            className="w-full mt-1 p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-amber-400 focus:bg-white transition-all"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Mobile Number *</label>
-                                        <input
-                                            required
-                                            type="tel"
-                                            name="phone"
-                                            pattern="[0-9]{10}"
-                                            title="Please enter a valid 10-digit mobile number"
-                                            placeholder="+91 98765 43210"
-                                            defaultValue={defaultPhone || ""}
-                                            className="w-full mt-1 p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-amber-400 focus:bg-white transition-all"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Message <span className="text-slate-400 normal-case">(optional)</span></label>
-                                        <textarea
-                                            name="message"
-                                            rows={3}
-                                            placeholder="Tell us what you need help with... (optional)"
-                                            className="w-full mt-1 p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-amber-400 focus:bg-white transition-all resize-none"
-                                        />
-                                    </div>
-                                </div>
+                                <form
+                                    onSubmit={handleSubmit}
+                                    className={`space-y-4 transition-all duration-300 ${!isLoggedIn ? "filter blur-[3px] select-none pointer-events-none opacity-50" : ""}`}
+                                >
+                                    {/* Honeypot field */}
+                                    <input type="text" name="website_hp" style={{ display: "none" }} tabIndex={-1} autoComplete="off" />
 
-                                <Button disabled={isSubmitting} type="submit" className="w-full bg-amber-400 hover:bg-amber-500 text-white py-5 mt-2 rounded-xl font-bold">
-                                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Request Callback"}
-                                </Button>
-                                <p className="text-[10px] text-center text-slate-400 mt-2">By submitting, you agree to our Privacy Policy.</p>
-                            </form>
+                                    {error && <div className="text-xs text-red-500 bg-red-50 p-3 rounded-xl border border-red-100">{error}</div>}
+
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Name *</label>
+                                            <input
+                                                required
+                                                type="text"
+                                                name="name"
+                                                placeholder="Rahul Kumar"
+                                                value={nameVal}
+                                                onChange={(e) => setNameVal(e.target.value)}
+                                                disabled={!isLoggedIn}
+                                                className="w-full mt-1 p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-amber-400 focus:bg-white transition-all"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Mobile Number *</label>
+                                            <input
+                                                required
+                                                type="tel"
+                                                name="phone"
+                                                maxLength={10}
+                                                placeholder="+91 98765 43210"
+                                                value={phoneVal}
+                                                onChange={(e) => setPhoneVal(e.target.value.replace(/\D/g, ''))}
+                                                disabled={!isLoggedIn}
+                                                className="w-full mt-1 p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-amber-400 focus:bg-white transition-all"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Message <span className="text-slate-400 normal-case">(optional)</span></label>
+                                            <textarea
+                                                name="message"
+                                                rows={3}
+                                                placeholder="Tell us what you need help with... (optional)"
+                                                disabled={!isLoggedIn}
+                                                className="w-full mt-1 p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-amber-400 focus:bg-white transition-all resize-none"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <Button
+                                        disabled={isSubmitting || !isLoggedIn}
+                                        type="submit"
+                                        className="w-full bg-amber-400 hover:bg-amber-500 text-white py-5 mt-2 rounded-xl font-bold cursor-pointer"
+                                    >
+                                        {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Request Callback"}
+                                    </Button>
+                                    <p className="text-[10px] text-center text-slate-400 mt-2">By submitting, you agree to our Privacy Policy.</p>
+                                </form>
+                            </div>
                         )}
                     </div>
                 </PopoverContent>
             </Popover>
         </div>
     );
-}
+}

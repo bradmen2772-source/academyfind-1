@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getSession } from '@/lib/auth/getSession';
+import { validateIndianPhoneNumber } from '@/lib/phone-validation';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { triggerCRMWebhooks } from '@/lib/crm/webhooks';
 import { sendEmail } from '@/lib/notifications/email';
 import { notifyAdminsPush } from '@/lib/pushNotifications';
@@ -10,13 +13,25 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getSession();
+    if (!session?.user) {
+      return NextResponse.json({ success: false, error: 'Authentication required. Please log in first.' }, { status: 401 });
+    }
+
     const { id } = await params;
     const body = await request.json();
-    const { name, phone, message, email } = body;
+    const { name, phone: phoneInput, message, email } = body;
 
-    if (!name || !phone) {
-      return NextResponse.json({ success: false, error: 'Name and phone are required' }, { status: 400 });
+    if (!name || !phoneInput) {
+      return NextResponse.json({ success: false, error: 'Name and phone are required.' }, { status: 400 });
     }
+
+    // Strict Phone Validation
+    const phoneResult = validateIndianPhoneNumber(phoneInput);
+    if (!phoneResult.isValid) {
+      return NextResponse.json({ success: false, error: phoneResult.error || 'Invalid 10-digit mobile number.' }, { status: 400 });
+    }
+    const phone = phoneResult.cleanedPhone!;
 
     const enquiry = await prisma.instituteEnquiry.create({
       data: {

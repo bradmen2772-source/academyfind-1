@@ -1,16 +1,45 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { submitLifeCoachRequest } from "@/lib/User/user/life-coach";
-import { Sparkles, Brain, Target, ShieldCheck, CheckCircle2, Loader2, MessageCircleQuestion, ArrowRight } from "lucide-react";
+import { Sparkles, Brain, Target, ShieldCheck, CheckCircle2, Loader2, MessageCircleQuestion, ArrowRight, Lock } from "lucide-react";
 import toast from "react-hot-toast";
+import Link from "next/link";
+import { authClient } from "@/lib/auth/auth-client";
+import { INDIAN_PHONE_REGEX } from "@/lib/phone-validation";
 
 export default function LifeCoachLandingPage() {
+  const { data: session, isPending: isSessionLoading } = authClient.useSession();
+  const isLoggedIn = Boolean(session?.user);
+
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+
+  useEffect(() => {
+    if (session?.user) {
+      if (session.user.name && !fullName) setFullName(session.user.name);
+      if (session.user.email && !email) setEmail(session.user.email);
+      if ((session.user as any).phone && !phone) setPhone((session.user as any).phone);
+    }
+  }, [session]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (!isLoggedIn) {
+      window.location.href = `/login?callbackUrl=${encodeURIComponent("/user/life-coach")}`;
+      return;
+    }
+
+    const cleanPhone = phone.replace(/\D/g, "");
+    if (!INDIAN_PHONE_REGEX.test(cleanPhone)) {
+      toast.error("Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9.");
+      return;
+    }
+
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
@@ -38,7 +67,7 @@ export default function LifeCoachLandingPage() {
           </p>
           <button 
             onClick={() => window.location.href = '/'}
-            className="mt-6 px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition-colors text-sm"
+            className="mt-6 px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition-colors text-sm cursor-pointer"
           >
             Back to Home
           </button>
@@ -93,50 +122,115 @@ export default function LifeCoachLandingPage() {
           </div>
         </div>
 
-        {/* Right Side: Request Form */}
-        <div className="lg:col-span-7 bg-white border border-amber-200 rounded-3xl p-6 md:p-10 shadow-lg shadow-amber-900/5">
+        {/* Right Side: Request Form Container */}
+        <div className="lg:col-span-7 bg-white border border-amber-200 rounded-3xl p-6 md:p-10 shadow-lg shadow-amber-900/5 relative overflow-hidden">
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-slate-800">Book Your Free Strategy Call</h2>
             <p className="text-sm text-slate-500 mt-1.5">Fill out your details below. Our senior counselor will connect with you to schedule a personalized session.</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          {/* ── Glassmorphic Overlay for Logged-Out Users ── */}
+          {!isSessionLoading && !isLoggedIn && (
+            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-6 bg-white/75 backdrop-blur-[3px] rounded-3xl text-center">
+              <div className="w-14 h-14 bg-amber-500/10 text-amber-600 rounded-2xl flex items-center justify-center mb-4 shadow-inner ring-1 ring-amber-500/20">
+                <Lock className="w-7 h-7" />
+              </div>
+              <h3 className="text-xl font-extrabold text-slate-900">Login to Book Strategy Call</h3>
+              <p className="text-sm text-slate-500 mt-2 max-w-sm leading-relaxed">
+                Sign in with AcademyFind to lock in your free personalized 1-on-1 mentorship session with our senior counselor.
+              </p>
+              <Link
+                href={`/login?callbackUrl=${encodeURIComponent("/user/life-coach")}`}
+                className="mt-6 w-full max-w-xs"
+              >
+                <button className="w-full py-4 bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm rounded-xl transition-all shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 cursor-pointer">
+                  Login to Continue <ArrowRight className="w-4 h-4" />
+                </button>
+              </Link>
+            </div>
+          )}
+
+          {/* ── Underneath Form (visible & blurred when logged out) ── */}
+          <form
+            onSubmit={handleSubmit}
+            className={`space-y-5 transition-all duration-300 ${!isLoggedIn ? "filter blur-[3px] select-none pointer-events-none opacity-50" : ""}`}
+          >
+            {/* Honeypot field for bot suppression */}
+            <input type="text" name="website_hp" style={{ display: "none" }} tabIndex={-1} autoComplete="off" />
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Full Name <span className="text-red-500">*</span></label>
-                <input type="text" name="fullName" required placeholder="John Doe" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 outline-none text-sm transition-all" />
+                <input
+                  type="text"
+                  name="fullName"
+                  required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="John Doe"
+                  disabled={!isLoggedIn}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 outline-none text-sm transition-all"
+                />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Contact Number <span className="text-red-500">*</span></label>
                 <div className="relative flex items-center">
                   <span className="absolute left-3.5 text-slate-500 font-medium text-sm pointer-events-none">+91</span>
-                  <input type="tel" maxLength={10} name="phone" required placeholder="98765 43210" className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 outline-none text-sm transition-all" onInput={(e) => {
-                      e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, '');
-                  }} />
+                  <input
+                    type="tel"
+                    maxLength={10}
+                    name="phone"
+                    required
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                    placeholder="98765 43210"
+                    disabled={!isLoggedIn}
+                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 outline-none text-sm transition-all"
+                  />
                 </div>
               </div>
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Email ID <span className="text-red-500">*</span></label>
-              <input type="email" name="email" required placeholder="name@domain.com" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 outline-none text-sm transition-all" />
+              <input
+                type="email"
+                name="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@domain.com"
+                disabled={!isLoggedIn}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 outline-none text-sm transition-all"
+              />
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Current Dilemma / Message</label>
-              <textarea name="message" rows={4} placeholder="Briefly describe what is confusing you (exams, branches, balancing school and coaching, etc.)..." className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 outline-none text-sm transition-all resize-none"></textarea>
+              <textarea
+                name="message"
+                rows={4}
+                placeholder="Briefly describe what is confusing you (exams, branches, balancing school and coaching, etc.)..."
+                disabled={!isLoggedIn}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 outline-none text-sm transition-all resize-none"
+              ></textarea>
             </div>
 
-            <button type="submit" disabled={loading} className="w-full py-4 mt-2 bg-amber-500 hover:bg-amber-600 text-white font-bold text-base rounded-xl transition-all shadow-md shadow-amber-600/20 flex justify-center items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
+            <button
+              type="submit"
+              disabled={loading || !isLoggedIn}
+              className="w-full py-4 mt-2 bg-amber-500 hover:bg-amber-600 text-white font-bold text-base rounded-xl transition-all shadow-md shadow-amber-600/20 flex justify-center items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
+            >
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <MessageCircleQuestion className="w-5 h-5" />}
               {loading ? "Locking Profile..." : "Submit Call Request"}
             </button>
             <p className="text-[11px] text-center text-slate-400 mt-3 flex items-center justify-center gap-1">
-               <ShieldCheck className="w-3 h-3" /> Your information is securely encrypted and never shared.
+              <ShieldCheck className="w-3 h-3" /> Your information is securely encrypted and never shared.
             </p>
           </form>
         </div>
       </div>
+
 
       {/* SEO Friendly Mini-FAQ Section */}
       <div className="container mx-auto px-4 mt-24 max-w-4xl text-center">

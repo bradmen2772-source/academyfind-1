@@ -2,27 +2,56 @@
 
 import { prisma } from "@/lib/prisma";
 import { notifyAdminsPush } from "@/lib/pushNotifications";
+import { getSession } from "@/lib/auth/getSession";
+import { validateIndianPhoneNumber } from "@/lib/phone-validation";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function requestGlobalCallback(formData: FormData) {
     try {
-        const name = formData.get("name") as string;
-        const phone = formData.get("phone") as string;
-        const sourceUrl = formData.get("sourceUrl") as string; 
+        // 1. Enforce Authentication
+        const session = await getSession();
+        if (!session?.user) {
+            return { success: false, error: "Please log in to request a callback." };
+        }
+
+        // 2. Honeypot Check (Silently drop bots)
+        const honeypot = formData.get("website_hp") as string;
+        if (honeypot) {
+            return { success: true };
+        }
+
+        // 3. Rate Limiting (max 3 per minute per IP)
+        const rateLimit = await checkRateLimit("global-callback", 3, 60000);
+        if (!rateLimit.success) {
+            return { success: false, error: rateLimit.message || "Too many requests. Please try again shortly." };
+        }
+
+        const name = (formData.get("name") as string || session.user.name || "").trim();
+        const phoneInput = formData.get("phone") as string || (session.user as any).phone || "";
+        const sourceUrl = formData.get("sourceUrl") as string || ""; 
         const userMessage = formData.get("message") as string;
 
-        if (!name || !phone) {
-            return { success: false, error: "Name and Phone are required." };
+        if (!name) {
+            return { success: false, error: "Name is required." };
         }
+
+        // 4. Strict Indian Phone Validation
+        const phoneResult = validateIndianPhoneNumber(phoneInput);
+        if (!phoneResult.isValid) {
+            return { success: false, error: phoneResult.error || "Please enter a valid 10-digit mobile number." };
+        }
+        const phone = phoneResult.cleanedPhone!;
 
         const messageParts = [];
         if (userMessage?.trim()) messageParts.push(userMessage.trim());
-        messageParts.push(`Callback requested from page: ${sourceUrl}`);
+        if (sourceUrl) messageParts.push(`Callback requested from page: ${sourceUrl}`);
 
         await prisma.lifeCoachRequest.create({
             data: {
                 fullName: name,
                 phone: phone,
-                message: messageParts.join(" | "),
+                email: session.user.email || null,
+                message: messageParts.join(" | ") || null,
                 status: "PENDING"
             }
         });

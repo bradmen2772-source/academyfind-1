@@ -2,6 +2,9 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { getSession } from "@/lib/auth/getSession";
+import { validateIndianPhoneNumber } from "@/lib/phone-validation";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 import { triggerCRMWebhooks } from "@/lib/crm/webhooks";
 import { sendEmail } from "@/lib/notifications/email";
@@ -10,11 +13,40 @@ import { notifyAdminsPush, sendExpoPushNotification } from "@/lib/pushNotificati
 
 export async function submitStudentEnquiry(formData: FormData) {
   try {
-    const name = formData.get("name") as string;
-    const phone = formData.get("phone") as string;
+    // 1. Enforce Authentication
+    const session = await getSession();
+    if (!session?.user) {
+      return { success: false, error: "Please log in to submit an admission enquiry." };
+    }
+
+    // 2. Honeypot Check (Silently drop bots)
+    const honeypot = formData.get("website_hp") as string;
+    if (honeypot) {
+      return { success: true };
+    }
+
+    // 3. Rate Limiting (max 4 per minute per IP)
+    const rateLimit = await checkRateLimit("student-enquiry", 4, 60000);
+    if (!rateLimit.success) {
+      return { success: false, error: rateLimit.message || "Too many requests. Please try again shortly." };
+    }
+
+    const name = (formData.get("name") as string || session.user.name || "").trim();
+    const phoneInput = formData.get("phone") as string || (session.user as any).phone || "";
     const message = formData.get("message") as string;
     const instituteId = formData.get("instituteId") as string;
-    const email = formData.get("email") as string | null;
+    const email = (formData.get("email") as string || session.user.email || "").trim() || null;
+
+    if (!name || !instituteId) {
+      return { success: false, error: "Name and Institute are required." };
+    }
+
+    // 4. Strict Indian Phone Validation
+    const phoneResult = validateIndianPhoneNumber(phoneInput);
+    if (!phoneResult.isValid) {
+      return { success: false, error: phoneResult.error || "Please enter a valid 10-digit mobile number." };
+    }
+    const phone = phoneResult.cleanedPhone!;
 
     const enquiry = await prisma.instituteEnquiry.create({
       data: {
@@ -22,8 +54,12 @@ export async function submitStudentEnquiry(formData: FormData) {
         phone,
         message,
         instituteId,
-        email: email || null,
+        email,
         status: "NEW",
+        sourceDetails: {
+          submittedByUserId: session.user.id,
+          userEmail: session.user.email,
+        },
       },
     });
 
