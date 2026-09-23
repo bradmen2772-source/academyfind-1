@@ -12,6 +12,7 @@ import { calculateReadingTime } from "@/lib/utils";
 import { creditWallet } from "@/lib/wallet/credit";
 import { AF_COINS_EARN } from "@/lib/wallet/af-coins";
 import { sendBlogSubmissionNotification } from "@/lib/notifications/blogNotifications";
+import type { BlogStatus } from "@/app/generated/prisma/client";
 
 const blogEditorSchema = z.object({
   id: z.string().min(1).optional(),
@@ -24,9 +25,9 @@ const blogEditorSchema = z.object({
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
   excerpt: z.string().trim().max(500),
   contentHtml: z.string().trim().min(1),
-  coverImage: z.union([z.literal(""), z.url()]),
+  coverImage: z.string().trim().max(1000),
   categoryId: z.string(),
-  brandId: z.string(),
+  brandId: z.string().optional().or(z.literal("")),
   tagNames: z.array(z.string().trim().min(1).max(50)).max(20),
   metaTitle: z.string().trim().max(70),
   metaDescription: z.string().trim().max(180),
@@ -57,7 +58,7 @@ export async function saveBlogPost(
     console.error("Unable to save blog post:", error);
     return {
       success: false,
-      error: "The post could not be saved. Please try again.",
+      error: error instanceof Error ? error.message : "The post could not be saved. Please try again.",
     };
   }
 }
@@ -141,6 +142,12 @@ async function persistBlogPost(
     return { success: false, error: "This slug is already in use." };
   }
 
+  const currentUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, role: true },
+  });
+  const isAdmin = currentUser?.role === "ADMIN";
+
   let existingPost: any = null;
   if (value.id) {
     existingPost = await prisma.blogPost.findUnique({
@@ -148,7 +155,11 @@ async function persistBlogPost(
       select: { authorProfileId: true, publishedAt: true, status: true },
     });
 
-    if (!existingPost || existingPost.authorProfileId !== author.id) {
+    if (!existingPost) {
+      return { success: false, error: "The post no longer exists." };
+    }
+
+    if (!isAdmin && existingPost.authorProfileId !== author.id) {
       return { success: false, error: "You cannot edit this post." };
     }
   }
@@ -159,10 +170,12 @@ async function persistBlogPost(
     ).values(),
   ];
 
-  const status = value.intent === "publish" ? "PENDING_REVIEW" : "DRAFT";
+  let status: BlogStatus = value.intent === "publish" ? "PENDING_REVIEW" : "DRAFT";
+  if (existingPost?.status === "PUBLISHED" && (isAdmin || value.intent === "publish")) {
+    status = "PUBLISHED";
+  }
   
-  // Fix: Do not set publishedAt immediately. Admin will set it when they approve the post.
-  const publishedAt = existingPost?.publishedAt ?? null;
+  const publishedAt = existingPost?.publishedAt ?? (status === "PUBLISHED" ? new Date() : null);
 
   const sharedData = {
     title: value.title,
@@ -184,55 +197,57 @@ async function persistBlogPost(
     ...(value.intent === "publish" ? { submittedAt: new Date() } : {}),
   } as const;
 
-  const post = await prisma.$transaction(async (tx) => {
-    const tags = await Promise.all(
-      uniqueTagNames.map((name: string) => {
-        const slug = slugify(name, { lower: true, strict: true, trim: true });
-        if (!slug) {
-          throw new Error(`Invalid tag: ${name}`);
-        }
+  // Upsert tags before entering transaction to keep interactive transaction fast
+  const tags = await Promise.all(
+    uniqueTagNames.map((name: string) => {
+      const slug = slugify(name, { lower: true, strict: true, trim: true });
+      if (!slug) {
+        throw new Error(`Invalid tag: ${name}`);
+      }
 
-        return tx.blogTag.upsert({
-          where: { slug },
-          create: { name, slug },
-          update: {},
-          select: { id: true },
+      return prisma.blogTag.upsert({
+        where: { slug },
+        create: { name, slug },
+        update: {},
+        select: { id: true },
+      });
+    }),
+  );
+
+  const post = await prisma.$transaction(
+    async (tx) => {
+      let savedPost;
+      if (value.id) {
+        savedPost = await tx.blogPost.update({
+          where: { id: value.id },
+          data: {
+            ...sharedData,
+            tags: {
+              deleteMany: {},
+              create: tags.map((tag: { id: string }) => ({ tagId: tag.id })),
+            },
+            faqs: {
+              deleteMany: {},
+              create: value.faqs.map((faq: { question: string; answer: string }, order: number) => ({ ...faq, order })),
+            },
+          },
+          select: { id: true, slug: true },
         });
-      }),
-    );
-
-    let savedPost;
-    if (value.id) {
-      savedPost = await tx.blogPost.update({
-        where: { id: value.id },
-        data: {
-          ...sharedData,
-          tags: {
-            deleteMany: {},
-            create: tags.map((tag: { id: string }) => ({ tagId: tag.id })),
+      } else {
+        savedPost = await tx.blogPost.create({
+          data: {
+            ...sharedData,
+            authorProfileId: author.id,
+            tags: {
+              create: tags.map((tag: { id: string }) => ({ tagId: tag.id })),
+            },
+            faqs: {
+              create: value.faqs.map((faq: { question: string; answer: string }, order: number) => ({ ...faq, order })),
+            },
           },
-          faqs: {
-            deleteMany: {},
-            create: value.faqs.map((faq: { question: string; answer: string }, order: number) => ({ ...faq, order })),
-          },
-        },
-        select: { id: true, slug: true },
-      });
-    } else {
-      savedPost = await tx.blogPost.create({
-        data: {
-          ...sharedData,
-          authorProfileId: author.id,
-          tags: {
-            create: tags.map((tag: { id: string }) => ({ tagId: tag.id })),
-          },
-          faqs: {
-            create: value.faqs.map((faq: { question: string; answer: string }, order: number) => ({ ...faq, order })),
-          },
-        },
-        select: { id: true, slug: true },
-      });
-    }
+          select: { id: true, slug: true },
+        });
+      }
 
     if (value.intent === "publish" && existingPost?.status !== "PENDING_REVIEW" && existingPost?.status !== "PUBLISHED") {
       await tx.adminNotification.create({
@@ -252,7 +267,7 @@ async function persistBlogPost(
     }
 
     return savedPost;
-  });
+  }, { timeout: 20000, maxWait: 10000 });
 
   if (value.intent === "publish" && !value.id) {
     await creditWallet(userId, AF_COINS_EARN.WRITE_BLOG, "BLOG_POST", "Earned coins for writing a new blog post");

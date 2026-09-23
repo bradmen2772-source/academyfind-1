@@ -9,20 +9,26 @@ export async function getEditBlogData(
   targetUserId?: string,
 ): Promise<BlogEditorInitialData | null> {
   let userId = targetUserId;
+  let isAdmin = false;
   if (!userId) {
     const session = await getCachedSession();
     if (!session?.user?.id) {
       return null;
     }
     userId = session.user.id;
+    isAdmin = session.user.role === "ADMIN";
+  } else {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+    isAdmin = user?.role === "ADMIN";
   }
 
   const post = await prisma.blogPost.findFirst({
     where: {
       id: postId,
-      authorProfile: {
-        userId,
-      },
+      ...(isAdmin ? {} : { authorProfile: { userId } }),
     },
     select: {
       id: true,

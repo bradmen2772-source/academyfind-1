@@ -23,7 +23,7 @@ const adminBlogSchema = z.object({
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
   excerpt: z.string().trim().max(500),
   contentHtml: z.string().trim().min(1),
-  coverImage: z.union([z.literal(""), z.url()]),
+  coverImage: z.string().trim().max(1000),
   categoryId: z.string(),
   brandId: z.string().optional().or(z.literal("")),
   authorProfileId: z.string().optional().or(z.literal("")),
@@ -51,7 +51,7 @@ const adminBlogSchema = z.object({
       "ARCHIVED",
     ]),
     visibility: z.enum(["PUBLIC", "UNLISTED", "PRIVATE"]),
-    canonicalUrl: z.union([z.literal(""), z.url()]),
+    canonicalUrl: z.string().trim().max(500),
     robotsIndex: z.boolean(),
     robotsFollow: z.boolean(),
     isFeatured: z.boolean(),
@@ -154,12 +154,19 @@ export async function saveAdminBlogPost(
 
     let finalAuthorProfileId: string | undefined = undefined;
     if (value.authorProfileId) {
-      const userId = value.authorProfileId;
+      // 1. Check if it's already a blogAuthorProfile ID
       let authorProfile = await prisma.blogAuthorProfile.findUnique({
-        where: { userId },
+        where: { id: value.authorProfileId },
       });
+      // 2. Otherwise check if it's a userId
       if (!authorProfile) {
-        const user = await prisma.user.findUnique({ where: { id: userId } });
+        authorProfile = await prisma.blogAuthorProfile.findUnique({
+          where: { userId: value.authorProfileId },
+        });
+      }
+      // 3. If still not found, check if a User exists with this ID to create profile
+      if (!authorProfile) {
+        const user = await prisma.user.findUnique({ where: { id: value.authorProfileId } });
         if (user) {
           authorProfile = await prisma.blogAuthorProfile.create({
             data: {
@@ -214,55 +221,61 @@ export async function saveAdminBlogPost(
       ...(finalAuthorProfileId ? { authorProfileId: finalAuthorProfileId } : {}),
     } as const;
 
-    const post = await prisma.$transaction(async (tx) => {
-      const tags = await Promise.all(
-        uniqueTagNames.map((name: string) => {
-          const slug = slugify(name, { lower: true, strict: true, trim: true });
-          if (!slug) throw new Error(`Invalid tag: ${name}`);
+    // Upsert tags before entering transaction to keep interactive transaction super fast
+    const tags = await Promise.all(
+      uniqueTagNames.map((name: string) => {
+        const slug = slugify(name, { lower: true, strict: true, trim: true });
+        if (!slug) throw new Error(`Invalid tag: ${name}`);
 
-          return tx.blogTag.upsert({
-            where: { slug },
-            create: { name, slug },
-            update: {},
-            select: { id: true },
+        return prisma.blogTag.upsert({
+          where: { slug },
+          create: { name, slug },
+          update: {},
+          select: { id: true },
+        });
+      }),
+    );
+
+    const post = await prisma.$transaction(
+      async (tx) => {
+        if (existing) {
+          return tx.blogPost.update({
+            where: { id: existing.id },
+            data: {
+              ...sharedData,
+              tags: {
+                deleteMany: {},
+                create: tags.map((tag: { id: string }) => ({ tagId: tag.id })),
+              },
+              faqs: {
+                deleteMany: {},
+                create: value.faqs.map((faq: { question: string; answer: string }, order: number) => ({ ...faq, order })),
+              },
+            },
+            select: { id: true, slug: true },
           });
-        }),
-      );
+        }
 
-      if (existing) {
-        return tx.blogPost.update({
-          where: { id: existing.id },
+        return tx.blogPost.create({
           data: {
             ...sharedData,
             tags: {
-              deleteMany: {},
               create: tags.map((tag: { id: string }) => ({ tagId: tag.id })),
             },
             faqs: {
-              deleteMany: {},
               create: value.faqs.map((faq: { question: string; answer: string }, order: number) => ({ ...faq, order })),
             },
           },
           select: { id: true, slug: true },
         });
-      }
+      },
+      { timeout: 20000, maxWait: 10000 },
+    );
 
-      return tx.blogPost.create({
-        data: {
-          ...sharedData,
-          tags: {
-            create: tags.map((tag: { id: string }) => ({ tagId: tag.id })),
-          },
-          faqs: {
-            create: value.faqs.map((faq: { question: string; answer: string }, order: number) => ({ ...faq, order })),
-          },
-        },
-        select: { id: true, slug: true },
-      });
+    // Sync post to Meilisearch non-blocking
+    syncBlogPostToMeili(post.id).catch((err) => {
+      console.error("Failed to sync post to Meilisearch:", err);
     });
-
-    // Sync post to Meilisearch
-    await syncBlogPostToMeili(post.id);
 
     // 🚀 Reward 5 AFC if post is newly published
     if (requestedStatus === "PUBLISHED" && !existing?.publishedAt && existing?.authorProfile?.userId) {
@@ -279,8 +292,10 @@ export async function saveAdminBlogPost(
     return {
       success: false,
       error:
-        error instanceof Error && error.message === "ADMIN_REQUIRED"
-          ? "Administrator access is required."
+        error instanceof Error
+          ? error.message === "ADMIN_REQUIRED"
+            ? "Administrator access is required."
+            : error.message
           : "The post could not be saved. Please try again.",
     };
   }
