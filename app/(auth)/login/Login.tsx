@@ -83,7 +83,11 @@ export default function LoginComponent({ stats }: { stats?: PlatformStats }) {
 
       if (error) {
         // Agar email verify nahi hai, toh auto-send OTP and show UI
-        if (error?.message?.toLowerCase().includes("not verified")) {
+        const isNotVerified =
+          (error as any)?.code === "EMAIL_NOT_VERIFIED" ||
+          error?.message?.toLowerCase().includes("not verified");
+
+        if (isNotVerified) {
           const { error: otpError } = await authClient.emailOtp.sendVerificationOtp({
             email: email,
             type: "email-verification",
@@ -100,12 +104,26 @@ export default function LoginComponent({ stats }: { stats?: PlatformStats }) {
           return;
         }
 
-        // Agar password galat hai ya koi aur error hai
-        if (error) {
-          toast.error("Some issues in login")
+        // Agar password ya email galat hai
+        const errorCode = (error as any)?.code;
+        const errorMessage = error?.message?.toLowerCase() || "";
+
+        if (
+          errorCode === "INVALID_EMAIL_OR_PASSWORD" ||
+          errorCode === "INVALID_PASSWORD" ||
+          errorCode === "USER_NOT_FOUND" ||
+          errorMessage.includes("invalid email or password") ||
+          errorMessage.includes("invalid password") ||
+          errorMessage.includes("user not found") ||
+          errorMessage.includes("credential account not found")
+        ) {
+          toast.error("Invalid credentials");
           return;
         }
 
+        // Agar koi aur error ho toh actual error message dikhayein
+        toast.error(error?.message || "Invalid credentials");
+        return;
       }
 
       // Login Successful!

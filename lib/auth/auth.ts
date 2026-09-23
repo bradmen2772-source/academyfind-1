@@ -19,6 +19,7 @@ export const auth = betterAuth({
 
     trustedOrigins: [
         "https://academyfind.com",
+        "https://www.academyfind.com",
         "http://localhost:3000",
         "exp://",           // Expo development
         "academyfind://",   // Production deep link
