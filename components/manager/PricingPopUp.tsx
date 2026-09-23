@@ -157,7 +157,7 @@ export function PricingModal({ children }: { children: React.ReactNode }) {
       <DialogTrigger asChild>{children}</DialogTrigger>
 
       <DialogContent
-        className="rounded-[2.5rem] border-0 p-6 md:p-8 bg-white max-h-[92vh] overflow-y-auto overflow-x-hidden w-[96vw] max-w-6xl shadow-2xl
+        className="rounded-3xl sm:rounded-[2.5rem] border-0 p-5 sm:p-6 md:p-8 bg-white max-h-[90vh] overflow-y-auto overflow-x-hidden w-[96vw] max-w-6xl sm:max-w-4xl md:max-w-5xl lg:max-w-6xl shadow-2xl
         data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-bottom-4
         data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=closed]:slide-out-to-bottom-4"
       >
@@ -169,16 +169,7 @@ export function PricingModal({ children }: { children: React.ReactNode }) {
         </DialogHeader>
 
         {/* 🚀 Header & Toggle */}
-        <div className="relative text-center pt-2">
-          {/* Decorative Top Right Slogan */}
-          <div className="hidden sm:block absolute right-2 top-0 text-right">
-            <span className="text-xs font-bold text-amber-900/90 tracking-wide transform -rotate-3 inline-block font-serif italic">
-              Education
-              <br />
-              Connects People
-            </span>
-          </div>
-
+        <div className="relative text-center pt-2 px-4 sm:px-8">
           <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
             Subscription <span className="text-amber-500">Plan</span>
           </h2>
@@ -187,12 +178,12 @@ export function PricingModal({ children }: { children: React.ReactNode }) {
           </p>
 
           {/* Toggle */}
-          <div className="mt-5 flex items-center justify-center gap-3">
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
             <div className="bg-sky-50/70 p-1.5 rounded-full inline-flex border border-sky-100 shadow-xs relative">
               <button
                 type="button"
                 onClick={() => setIsAnnual(false)}
-                className={`relative z-10 px-6 py-1.5 text-xs font-bold rounded-full transition-all duration-200 cursor-pointer ${
+                className={`relative z-10 px-5 sm:px-6 py-1.5 text-xs font-bold rounded-full transition-all duration-200 cursor-pointer ${
                   !isAnnual
                     ? "bg-amber-400 text-slate-950 shadow-sm"
                     : "text-slate-600 hover:text-slate-900"
@@ -203,7 +194,7 @@ export function PricingModal({ children }: { children: React.ReactNode }) {
               <button
                 type="button"
                 onClick={() => setIsAnnual(true)}
-                className={`relative z-10 px-6 py-1.5 text-xs font-bold rounded-full transition-all duration-200 cursor-pointer ${
+                className={`relative z-10 px-5 sm:px-6 py-1.5 text-xs font-bold rounded-full transition-all duration-200 cursor-pointer ${
                   isAnnual
                     ? "bg-amber-400 text-slate-950 shadow-sm"
                     : "text-slate-600 hover:text-slate-900"
@@ -213,11 +204,13 @@ export function PricingModal({ children }: { children: React.ReactNode }) {
               </button>
             </div>
 
-            <div className="hidden sm:flex items-center gap-1.5 text-[#059669]">
-              <span className="text-xs font-bold italic tracking-tight font-serif">
-                Save more with Annual Plan
-              </span>
-            </div>
+            {isAnnual && (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 animate-in fade-in duration-200">
+                <span className="text-xs font-bold font-serif italic">
+                  Save more with Annual Plan ✨
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -233,7 +226,7 @@ export function PricingModal({ children }: { children: React.ReactNode }) {
             return (
               <div
                 key={plan.id}
-                className={`relative rounded-3xl p-5 flex flex-col justify-between transition-all duration-300 bg-white ${
+                className={`relative rounded-3xl p-5 flex flex-col justify-between transition-all duration-300 bg-white min-w-0 ${
                   isPremium
                     ? "border-2 border-amber-400 shadow-xl shadow-amber-200/30"
                     : "border border-slate-200 shadow-sm hover:border-amber-300"
@@ -241,7 +234,7 @@ export function PricingModal({ children }: { children: React.ReactNode }) {
               >
                 {/* Crown badge for Premium */}
                 {isPremium && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-400 text-slate-950 font-black text-[10px] uppercase tracking-wider px-4 py-1 rounded-full shadow-sm flex items-center gap-1">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-400 text-slate-950 font-black text-[10px] uppercase tracking-wider px-4 py-1 rounded-full shadow-sm flex items-center gap-1 z-10">
                     <Crown className="w-3 h-3 fill-current" />
                     <span>MOST POPULAR</span>
                   </div>
@@ -249,12 +242,12 @@ export function PricingModal({ children }: { children: React.ReactNode }) {
 
                 {/* Best Growth Badge for Elite */}
                 {isElite && (
-                  <div className="absolute -top-2.5 right-4 bg-emerald-100 text-emerald-800 font-extrabold text-[9px] px-2.5 py-0.5 rounded-full border border-emerald-200 shadow-xs">
+                  <div className="absolute -top-3 right-4 bg-emerald-100 text-emerald-800 font-extrabold text-[10px] px-3 py-0.5 rounded-full border border-emerald-200 shadow-xs z-10">
                     Best for Maximum Growth
                   </div>
                 )}
 
-                <div>
+                <div className="pt-1">
                   <h3 className="text-xl font-black tracking-tight text-slate-900 mt-1">
                     {plan.name}
                   </h3>
@@ -264,17 +257,19 @@ export function PricingModal({ children }: { children: React.ReactNode }) {
 
                   {/* Price */}
                   <div className="mt-4 mb-4 pb-4 border-b border-slate-100">
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-3xl font-black text-amber-500 tracking-tight">
-                        ₹{priceData.offer.toLocaleString("en-IN")}
-                      </span>
-                      <span className="text-xs font-semibold text-slate-500">
-                        /{isAnnual ? "yr" : "mo"}
-                      </span>
+                    <div className="flex flex-wrap items-baseline justify-between gap-1.5">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-2xl sm:text-3xl font-black text-amber-500 tracking-tight">
+                          ₹{priceData.offer.toLocaleString("en-IN")}
+                        </span>
+                        <span className="text-xs font-semibold text-slate-500">
+                          /{isAnnual ? "yr" : "mo"}
+                        </span>
+                      </div>
 
                       {isAnnual && (
-                        <span className="ml-auto bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-extrabold px-2 py-0.5 rounded-full whitespace-nowrap">
-                          Save with Annual Plan
+                        <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-extrabold px-2 py-0.5 rounded-full whitespace-nowrap">
+                          Save with Annual
                         </span>
                       )}
                     </div>
