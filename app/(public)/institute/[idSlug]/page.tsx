@@ -37,6 +37,7 @@ import { InteractiveGallery } from "@/components/ui/interactive-gallery";
 import { ReviewItem } from "@/components/reviews/ReviewItem";
 import { UnlockContactButton } from "@/components/institutes/UnlockContactButton";
 import { UnlockBasicFeaturesOverlay } from "@/components/institutes/UnlockBasicFeaturesOverlay";
+import { VerifiedBadge } from "@/components/institutes/VerifiedBadge";
 
 export const revalidate = 0;
 
@@ -488,18 +489,21 @@ export default async function InstitutePage({ params }: PageProps) {
                 <div className="mt-16 md:mt-20">
                   <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
                     <div>
-                      <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
-                        <h1 className="text-3xl font-bold text-slate-900 sm:text-4xl">
-                          {institute.name}
-                          <span className="block text-lg font-medium text-slate-500 mt-1">
-                            Best {institute.categories[0]?.category.name} in {institute.city.name}
-                          </span>
-                        </h1>
-                        {institute.isVerified && (
-                          <p className="text-[0.65rem] font-bold text-blue-600 flex items-center gap-1 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100 mt-1">
-                            <CheckCircle className="h-3.5 w-3.5" /> Verified
-                          </p>
-                        )}
+                      <div className="flex flex-col items-center md:items-start text-center md:text-left">
+                        <div className="flex flex-wrap items-center justify-center md:justify-start gap-2.5">
+                          <h1 className="text-3xl font-extrabold text-slate-900 sm:text-4xl tracking-tight">
+                            {institute.name}
+                          </h1>
+                          {institute.isVerified && (
+                            <VerifiedBadge
+                              instituteName={institute.name}
+                              variant="header"
+                            />
+                          )}
+                        </div>
+                        <p className="text-base sm:text-lg font-medium text-slate-500 mt-1">
+                          Best {institute.categories[0]?.category.name} in {institute.city.name}
+                        </p>
                       </div>
                       <div className="mt-3 flex flex-wrap items-center justify-center md:justify-start gap-3">
                         <div className="flex flex-wrap justify-center md:justify-start gap-2">
@@ -1477,9 +1481,8 @@ export default async function InstitutePage({ params }: PageProps) {
                         className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
                       {simInst.isVerified && (
-                        <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm">
-                          <CheckCircle className="w-3.5 h-3.5 text-blue-500" />
-                          <span className="text-[10px] font-bold text-slate-700">Verified</span>
+                        <div className="absolute top-3 left-3 z-10">
+                          <VerifiedBadge variant="card" showTooltip={false} />
                         </div>
                       )}
                     </div>

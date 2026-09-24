@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Star, ShieldCheck, MapPin, ArrowRight } from "lucide-react";
 import { CommunityLeadModal } from "@/components/community/CommunityLeadModal";
 import { Button } from "@/components/ui/button";
+import { VerifiedBadge } from "@/components/institutes/VerifiedBadge";
 
 interface FeaturedInstitutesRailProps {
   institutes: Array<{
@@ -75,12 +76,17 @@ export function FeaturedInstitutesRail({
                 )}
               </div>
 
-              <Link
-                href={`/institute/${inst.slug}`}
-                className="font-bold text-sm text-slate-900 line-clamp-1 hover:text-amber-600 transition-colors"
-              >
-                {inst.name}
-              </Link>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Link
+                  href={`/institute/${inst.slug}`}
+                  className="font-bold text-sm text-slate-900 line-clamp-1 hover:text-amber-600 transition-colors"
+                >
+                  {inst.name}
+                </Link>
+                {inst.isVerified && (
+                  <VerifiedBadge variant="icon-only" showTooltip={false} />
+                )}
+              </div>
 
               <div className="flex items-center gap-1 text-[11px] text-slate-500 mt-1 mb-2">
                 <MapPin className="w-3 h-3 text-amber-500 shrink-0" />

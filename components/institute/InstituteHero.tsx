@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { VerifiedBadge } from "@/components/institutes/VerifiedBadge";
 
 export default function InstituteHero() {
   return (
@@ -30,7 +31,7 @@ export default function InstituteHero() {
                       Allen Career Institute
                     </h1>
 
-                    <BadgeCheck className="h-6 w-6 text-amber-500" />
+                    <VerifiedBadge instituteName="Allen Career Institute" variant="header" />
                   </div>
 
                   <p className="mt-2 text-slate-600">
