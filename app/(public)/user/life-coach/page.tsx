@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { submitLifeCoachRequest } from "@/lib/User/user/life-coach";
-import { Sparkles, Brain, Target, ShieldCheck, CheckCircle2, Loader2, MessageCircleQuestion, ArrowRight, Lock } from "lucide-react";
+import { Sparkles, Brain, Target, ShieldCheck, CheckCircle2, Loader2, MessageCircleQuestion } from "lucide-react";
 import toast from "react-hot-toast";
-import Link from "next/link";
 import { authClient } from "@/lib/auth/auth-client";
 import { INDIAN_PHONE_REGEX } from "@/lib/phone-validation";
 
@@ -28,11 +27,6 @@ export default function LifeCoachLandingPage() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
-    if (!isLoggedIn) {
-      window.location.href = `/login?callbackUrl=${encodeURIComponent("/user/life-coach")}`;
-      return;
-    }
 
     const cleanPhone = phone.replace(/\D/g, "");
     if (!INDIAN_PHONE_REGEX.test(cleanPhone)) {
@@ -129,31 +123,10 @@ export default function LifeCoachLandingPage() {
             <p className="text-sm text-slate-500 mt-1.5">Fill out your details below. Our senior counselor will connect with you to schedule a personalized session.</p>
           </div>
 
-          {/* ── Glassmorphic Overlay for Logged-Out Users ── */}
-          {!isSessionLoading && !isLoggedIn && (
-            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-6 bg-white/75 backdrop-blur-[3px] rounded-3xl text-center">
-              <div className="w-14 h-14 bg-amber-500/10 text-amber-600 rounded-2xl flex items-center justify-center mb-4 shadow-inner ring-1 ring-amber-500/20">
-                <Lock className="w-7 h-7" />
-              </div>
-              <h3 className="text-xl font-extrabold text-slate-900">Login to Book Strategy Call</h3>
-              <p className="text-sm text-slate-500 mt-2 max-w-sm leading-relaxed">
-                Sign in with AcademyFind to lock in your free personalized 1-on-1 mentorship session with our senior counselor.
-              </p>
-              <Link
-                href={`/login?callbackUrl=${encodeURIComponent("/user/life-coach")}`}
-                className="mt-6 w-full max-w-xs"
-              >
-                <button className="w-full py-4 bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm rounded-xl transition-all shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 cursor-pointer">
-                  Login to Continue <ArrowRight className="w-4 h-4" />
-                </button>
-              </Link>
-            </div>
-          )}
-
-          {/* ── Underneath Form (visible & blurred when logged out) ── */}
+          {/* ── Direct Submission Form (Accessible to all users) ── */}
           <form
             onSubmit={handleSubmit}
-            className={`space-y-5 transition-all duration-300 ${!isLoggedIn ? "filter blur-[3px] select-none pointer-events-none opacity-50" : ""}`}
+            className="space-y-5"
           >
             {/* Honeypot field for bot suppression */}
             <input type="text" name="website_hp" style={{ display: "none" }} tabIndex={-1} autoComplete="off" />
@@ -168,7 +141,6 @@ export default function LifeCoachLandingPage() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="John Doe"
-                  disabled={!isLoggedIn}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 outline-none text-sm transition-all"
                 />
               </div>
@@ -184,7 +156,6 @@ export default function LifeCoachLandingPage() {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
                     placeholder="98765 43210"
-                    disabled={!isLoggedIn}
                     className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 outline-none text-sm transition-all"
                   />
                 </div>
@@ -200,7 +171,6 @@ export default function LifeCoachLandingPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@domain.com"
-                disabled={!isLoggedIn}
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 outline-none text-sm transition-all"
               />
             </div>
@@ -211,14 +181,13 @@ export default function LifeCoachLandingPage() {
                 name="message"
                 rows={4}
                 placeholder="Briefly describe what is confusing you (exams, branches, balancing school and coaching, etc.)..."
-                disabled={!isLoggedIn}
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 outline-none text-sm transition-all resize-none"
               ></textarea>
             </div>
 
             <button
               type="submit"
-              disabled={loading || !isLoggedIn}
+              disabled={loading}
               className="w-full py-4 mt-2 bg-amber-500 hover:bg-amber-600 text-white font-bold text-base rounded-xl transition-all shadow-md shadow-amber-600/20 flex justify-center items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
             >
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <MessageCircleQuestion className="w-5 h-5" />}

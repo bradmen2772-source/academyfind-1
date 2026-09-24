@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { Loader2, CheckCircle2, HeadphonesIcon, X, Lock, ArrowRight } from "lucide-react";
+import { Loader2, CheckCircle2, HeadphonesIcon, X } from "lucide-react";
 import { requestGlobalCallback } from "@/lib/User/user/global-callback";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -52,11 +52,6 @@ export default function GlobalCallbackFAB({ defaultName, defaultPhone }: GlobalC
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-
-        if (!isLoggedIn) {
-            window.location.href = buildAuthHref("/login", pathname);
-            return;
-        }
 
         const cleanPhone = phoneVal.replace(/\D/g, "");
         if (!INDIAN_PHONE_REGEX.test(cleanPhone)) {
@@ -144,31 +139,9 @@ export default function GlobalCallbackFAB({ defaultName, defaultPhone }: GlobalC
                             </div>
                         ) : (
                             <div className="relative">
-                                {/* ── Login Overlay for unauthenticated users ── */}
-                                {!isLoggedIn && (
-                                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-3 bg-white/80 backdrop-blur-[2px] rounded-2xl text-center">
-                                        <div className="w-11 h-11 bg-amber-500/10 text-amber-600 rounded-xl flex items-center justify-center mb-2 shadow-inner ring-1 ring-amber-500/20">
-                                            <Lock className="w-5 h-5" />
-                                        </div>
-                                        <h4 className="text-sm font-extrabold text-slate-900">Login to Request Callback</h4>
-                                        <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                                            Sign in to connect directly with our expert counseling team.
-                                        </p>
-                                        <Link
-                                            href={buildAuthHref("/login", pathname)}
-                                            onClick={() => setIsOpen(false)}
-                                            className="w-full mt-3.5"
-                                        >
-                                            <Button className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl shadow-md shadow-amber-500/20 py-4 text-xs flex items-center justify-center gap-1.5 cursor-pointer">
-                                                Login to Continue <ArrowRight className="w-3.5 h-3.5" />
-                                            </Button>
-                                        </Link>
-                                    </div>
-                                )}
-
                                 <form
                                     onSubmit={handleSubmit}
-                                    className={`space-y-4 transition-all duration-300 ${!isLoggedIn ? "filter blur-[3px] select-none pointer-events-none opacity-50" : ""}`}
+                                    className="space-y-4"
                                 >
                                     {/* Honeypot field */}
                                     <input type="text" name="website_hp" style={{ display: "none" }} tabIndex={-1} autoComplete="off" />
@@ -185,7 +158,6 @@ export default function GlobalCallbackFAB({ defaultName, defaultPhone }: GlobalC
                                                 placeholder="Rahul Kumar"
                                                 value={nameVal}
                                                 onChange={(e) => setNameVal(e.target.value)}
-                                                disabled={!isLoggedIn}
                                                 className="w-full mt-1 p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-amber-400 focus:bg-white transition-all"
                                             />
                                         </div>
@@ -199,7 +171,6 @@ export default function GlobalCallbackFAB({ defaultName, defaultPhone }: GlobalC
                                                 placeholder="+91 98765 43210"
                                                 value={phoneVal}
                                                 onChange={(e) => setPhoneVal(e.target.value.replace(/\D/g, ''))}
-                                                disabled={!isLoggedIn}
                                                 className="w-full mt-1 p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-amber-400 focus:bg-white transition-all"
                                             />
                                         </div>
@@ -209,14 +180,13 @@ export default function GlobalCallbackFAB({ defaultName, defaultPhone }: GlobalC
                                                 name="message"
                                                 rows={3}
                                                 placeholder="Tell us what you need help with... (optional)"
-                                                disabled={!isLoggedIn}
                                                 className="w-full mt-1 p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-amber-400 focus:bg-white transition-all resize-none"
                                             />
                                         </div>
                                     </div>
 
                                     <Button
-                                        disabled={isSubmitting || !isLoggedIn}
+                                        disabled={isSubmitting}
                                         type="submit"
                                         className="w-full bg-amber-400 hover:bg-amber-500 text-white py-5 mt-2 rounded-xl font-bold cursor-pointer"
                                     >

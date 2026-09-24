@@ -8,11 +8,8 @@ import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function requestGlobalCallback(formData: FormData) {
     try {
-        // 1. Enforce Authentication
+        // 1. Optional Session (supports both logged-in and guest users)
         const session = await getSession();
-        if (!session?.user) {
-            return { success: false, error: "Please log in to request a callback." };
-        }
 
         // 2. Honeypot Check (Silently drop bots)
         const honeypot = formData.get("website_hp") as string;
@@ -26,8 +23,8 @@ export async function requestGlobalCallback(formData: FormData) {
             return { success: false, error: rateLimit.message || "Too many requests. Please try again shortly." };
         }
 
-        const name = (formData.get("name") as string || session.user.name || "").trim();
-        const phoneInput = formData.get("phone") as string || (session.user as any).phone || "";
+        const name = (formData.get("name") as string || session?.user?.name || "").trim();
+        const phoneInput = formData.get("phone") as string || (session?.user as any)?.phone || "";
         const sourceUrl = formData.get("sourceUrl") as string || ""; 
         const userMessage = formData.get("message") as string;
 
@@ -50,7 +47,7 @@ export async function requestGlobalCallback(formData: FormData) {
             data: {
                 fullName: name,
                 phone: phone,
-                email: session.user.email || null,
+                email: session?.user?.email || null,
                 message: messageParts.join(" | ") || null,
                 status: "PENDING"
             }

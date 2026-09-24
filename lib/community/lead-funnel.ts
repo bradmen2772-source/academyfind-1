@@ -88,9 +88,6 @@ export async function getRelevantInstitutesForCommunity(
 export async function submitCommunityLead(formData: FormData) {
   try {
     const session = await getSession();
-    if (!session?.user) {
-      return { success: false, error: "Please sign in to request institute counseling." };
-    }
 
     // Rate Limiting (max 4 per minute per IP)
     const rateLimit = await checkRateLimit("community-enquiry", 4, 60000);
@@ -98,9 +95,9 @@ export async function submitCommunityLead(formData: FormData) {
       return { success: false, error: rateLimit.message || "Too many requests. Please wait a moment." };
     }
 
-    const name = ((formData.get("name") as string) || session.user.name || "").trim();
-    const phoneInput = (formData.get("phone") as string) || (session.user as any).phone || "";
-    const email = ((formData.get("email") as string) || session.user.email || "").trim() || null;
+    const name = ((formData.get("name") as string) || session?.user?.name || "").trim();
+    const phoneInput = (formData.get("phone") as string) || (session?.user as any)?.phone || "";
+    const email = ((formData.get("email") as string) || session?.user?.email || "").trim() || null;
     const instituteId = formData.get("instituteId") as string;
     const examCategory = (formData.get("examCategory") as string) || "General";
     const studyGroupId = (formData.get("studyGroupId") as string) || null;
@@ -130,7 +127,7 @@ export async function submitCommunityLead(formData: FormData) {
         message: formattedMessage,
         status: "NEW",
         sourceDetails: {
-          submittedByUserId: session.user.id,
+          submittedByUserId: session?.user?.id || null,
           source: "COMMUNITY_STUDY_GROUP",
           examCategory,
           studyGroupId,
@@ -162,14 +159,16 @@ export async function submitCommunityLead(formData: FormData) {
       createdAt: enquiry.createdAt,
     }).catch(() => null);
 
-    // Reward student with +20 AcademyFind coins for booking an admission demo
-    await creditWallet(
-      session.user.id,
-      20,
-      "COMPLETE_PROFILE",
-      `Earned 20 coins for requesting counseling at ${enquiry.institute.name}`,
-      enquiry.id
-    ).catch(() => null);
+    // Reward student with +20 AcademyFind coins for booking an admission demo (if logged in)
+    if (session?.user?.id) {
+      await creditWallet(
+        session.user.id,
+        20,
+        "COMPLETE_PROFILE",
+        `Earned 20 coins for requesting counseling at ${enquiry.institute.name}`,
+        enquiry.id
+      ).catch(() => null);
+    }
 
     revalidatePath("/community");
     revalidatePath("/community/groups");

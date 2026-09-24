@@ -13,11 +13,8 @@ import { notifyAdminsPush, sendExpoPushNotification } from "@/lib/pushNotificati
 
 export async function submitStudentEnquiry(formData: FormData) {
   try {
-    // 1. Enforce Authentication
+    // 1. Optional Session (supports both logged-in and guest users)
     const session = await getSession();
-    if (!session?.user) {
-      return { success: false, error: "Please log in to submit an admission enquiry." };
-    }
 
     // 2. Honeypot Check (Silently drop bots)
     const honeypot = formData.get("website_hp") as string;
@@ -31,11 +28,11 @@ export async function submitStudentEnquiry(formData: FormData) {
       return { success: false, error: rateLimit.message || "Too many requests. Please try again shortly." };
     }
 
-    const name = (formData.get("name") as string || session.user.name || "").trim();
-    const phoneInput = formData.get("phone") as string || (session.user as any).phone || "";
+    const name = (formData.get("name") as string || session?.user?.name || "").trim();
+    const phoneInput = formData.get("phone") as string || (session?.user as any)?.phone || "";
     const message = formData.get("message") as string;
     const instituteId = formData.get("instituteId") as string;
-    const email = (formData.get("email") as string || session.user.email || "").trim() || null;
+    const email = (formData.get("email") as string || session?.user?.email || "").trim() || null;
 
     if (!name || !instituteId) {
       return { success: false, error: "Name and Institute are required." };
@@ -57,8 +54,8 @@ export async function submitStudentEnquiry(formData: FormData) {
         email,
         status: "NEW",
         sourceDetails: {
-          submittedByUserId: session.user.id,
-          userEmail: session.user.email,
+          submittedByUserId: session?.user?.id || null,
+          userEmail: session?.user?.email || email || null,
         },
       },
     });

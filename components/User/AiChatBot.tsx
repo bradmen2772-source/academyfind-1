@@ -4,7 +4,7 @@
 import { useState, useRef, useEffect, useCallback, useDeferredValue } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { X, MessageCircle, Send, Sparkles, Plus, Phone, Loader2, CheckCircle2, Paperclip, FileText, Lock, LogIn } from "lucide-react";
+import { X, MessageCircle, Send, Sparkles, Plus, Phone, Loader2, CheckCircle2, Paperclip, FileText, LogIn } from "lucide-react";
 import { useChat } from "@ai-sdk/react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -289,11 +289,6 @@ export default function AiChatBot({ isAuthenticated = false, defaultName, defaul
 
     const handleCallbackSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-
-        if (!isAuthenticated) {
-            window.location.href = buildAuthHref("/login", pathname);
-            return;
-        }
 
         const rawPhone = (new FormData(e.currentTarget).get("phone") as string) || "";
         const cleanPhone = rawPhone.replace(/\D/g, "");
@@ -657,31 +652,9 @@ export default function AiChatBot({ isAuthenticated = false, defaultName, defaul
                                     </div>
                                 ) : (
                                     <div className="relative">
-                                        {/* ── Login Overlay for unauthenticated users ── */}
-                                        {!isAuthenticated && (
-                                            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-3 bg-white/80 backdrop-blur-[2px] rounded-2xl text-center">
-                                                <div className="w-11 h-11 bg-amber-500/10 text-amber-600 rounded-xl flex items-center justify-center mb-2 shadow-inner ring-1 ring-amber-500/20">
-                                                    <Lock className="w-5 h-5" />
-                                                </div>
-                                                <h4 className="text-sm font-extrabold text-slate-900">Login to Request Callback</h4>
-                                                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                                                    Sign in to connect directly with our expert counseling team.
-                                                </p>
-                                                <Link
-                                                    href={buildAuthHref("/login", pathname)}
-                                                    onClick={() => setIsOpen(false)}
-                                                    className="w-full mt-3.5"
-                                                >
-                                                    <Button className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl shadow-md shadow-amber-500/20 py-4 text-xs flex items-center justify-center gap-1.5 cursor-pointer">
-                                                        Login to Continue
-                                                    </Button>
-                                                </Link>
-                                            </div>
-                                        )}
-
                                         <form
                                             onSubmit={handleCallbackSubmit}
-                                            className={`space-y-4 transition-all duration-300 ${!isAuthenticated ? "filter blur-[3px] select-none pointer-events-none opacity-50" : ""}`}
+                                            className="space-y-4"
                                         >
                                             {/* Honeypot field */}
                                             <input type="text" name="website_hp" style={{ display: "none" }} tabIndex={-1} autoComplete="off" />
@@ -697,7 +670,6 @@ export default function AiChatBot({ isAuthenticated = false, defaultName, defaul
                                                         name="name"
                                                         placeholder="Rahul Kumar"
                                                         defaultValue={defaultName || ""}
-                                                        disabled={!isAuthenticated}
                                                         className="w-full mt-1 p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-amber-400 focus:bg-white transition-all"
                                                     />
                                                 </div>
@@ -710,7 +682,6 @@ export default function AiChatBot({ isAuthenticated = false, defaultName, defaul
                                                         maxLength={10}
                                                         placeholder="+91 98765 43210"
                                                         defaultValue={defaultPhone || ""}
-                                                        disabled={!isAuthenticated}
                                                         className="w-full mt-1 p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-amber-400 focus:bg-white transition-all"
                                                     />
                                                 </div>
@@ -720,13 +691,12 @@ export default function AiChatBot({ isAuthenticated = false, defaultName, defaul
                                                         name="message"
                                                         rows={3}
                                                         placeholder="Tell us what you need help with... (optional)"
-                                                        disabled={!isAuthenticated}
                                                         className="w-full mt-1 p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-amber-400 focus:bg-white transition-all resize-none"
                                                     />
                                                 </div>
                                             </div>
 
-                                            <Button disabled={isSubmitting || !isAuthenticated} type="submit" className="w-full bg-amber-400 hover:bg-amber-500 text-white py-5 mt-2 rounded-xl font-bold cursor-pointer">
+                                            <Button disabled={isSubmitting} type="submit" className="w-full bg-amber-400 hover:bg-amber-500 text-white py-5 mt-2 rounded-xl font-bold cursor-pointer">
                                                 {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Request Callback"}
                                             </Button>
                                             <p className="text-[10px] text-center text-slate-400 mt-2">By submitting, you agree to our Privacy Policy.</p>

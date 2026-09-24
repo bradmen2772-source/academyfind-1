@@ -7,14 +7,8 @@ import { validateIndianPhoneNumber } from "@/lib/phone-validation";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function submitLifeCoachRequest(formData: FormData) {
-    // 1. Enforce Authentication
+    // 1. Optional Session (supports both logged-in and guest users)
     const session = await getSession();
-    if (!session?.user) {
-        return {
-            success: false,
-            error: "Please log in to book a Life Coach session.",
-        };
-    }
 
     // 2. Honeypot check (silently trap bots)
     const honeypot = formData.get("website_hp") as string;
@@ -28,9 +22,9 @@ export async function submitLifeCoachRequest(formData: FormData) {
         return { success: false, error: rateLimit.message || "Too many requests. Please try again later." };
     }
 
-    const fullName = (formData.get("fullName") as string || session.user.name || "").trim();
-    const phoneInput = formData.get("phone") as string || (session.user as any).phone || "";
-    const email = (formData.get("email") as string || session.user.email || "").trim();
+    const fullName = (formData.get("fullName") as string || session?.user?.name || "").trim();
+    const phoneInput = formData.get("phone") as string || (session?.user as any)?.phone || "";
+    const email = (formData.get("email") as string || session?.user?.email || "").trim();
     const message = formData.get("message") as string;
 
     if (!fullName) {
@@ -59,7 +53,7 @@ export async function submitLifeCoachRequest(formData: FormData) {
                 type: "NEW_LIFE_COACH_REQUEST",
                 title: "New Life Coach Request",
                 message: `${fullName} (${phone}) requested a life coach.`,
-                userId: session.user.id,
+                userId: session?.user?.id || null,
             }
         });
 
