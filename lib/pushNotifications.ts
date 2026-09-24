@@ -7,12 +7,14 @@ export async function sendExpoPushNotification({
   body,
   data = {},
   channelId = 'default',
+  badge,
 }: {
   pushToken: string;
   title: string;
   body: string;
   data?: Record<string, any>;
   channelId?: string;
+  badge?: number;
 }) {
   if (!pushToken || !pushToken.startsWith('ExponentPushToken[')) {
     console.warn('⚠️ Invalid Expo push token:', pushToken);
@@ -20,7 +22,7 @@ export async function sendExpoPushNotification({
   }
 
   try {
-    const message = {
+    const message: Record<string, any> = {
       to: pushToken,
       sound: 'default',
       title,
@@ -29,6 +31,11 @@ export async function sendExpoPushNotification({
       channelId,
       _displayInForeground: true,
     };
+
+    // Include app icon badge count (shows number/dot on app icon like WhatsApp)
+    if (typeof badge === 'number') {
+      message.badge = Math.max(0, badge);
+    }
 
     const res = await fetch('https://exp.host/--/api/v2/push/send', {
       method: 'POST',
@@ -56,10 +63,14 @@ export async function notifyAdminsPush({
   title,
   body,
   data = {},
+  channelId = 'default',
+  badge,
 }: {
   title: string;
   body: string;
   data?: Record<string, any>;
+  channelId?: string;
+  badge?: number;
 }) {
   try {
     const adminUsers = await prisma.user.findMany({
@@ -67,13 +78,20 @@ export async function notifyAdminsPush({
       select: { pushToken: true }
     });
 
+    // Compute unread count for admins if not provided
+    const unreadCount = badge !== undefined ? badge : await prisma.adminNotification.count({
+      where: { isRead: false }
+    }).catch(() => undefined);
+
     for (const admin of adminUsers) {
       if (admin.pushToken) {
         sendExpoPushNotification({
           pushToken: admin.pushToken,
           title,
           body,
-          data
+          data,
+          channelId,
+          badge: unreadCount,
         }).catch(err => console.error("Admin Push send error:", err));
       }
     }
@@ -90,11 +108,15 @@ export async function notifyUserPush({
   title,
   body,
   data = {},
+  channelId = 'default',
+  badge,
 }: {
   userId: string;
   title: string;
   body: string;
   data?: Record<string, any>;
+  channelId?: string;
+  badge?: number;
 }) {
   try {
     const user = await prisma.user.findUnique({
@@ -103,11 +125,18 @@ export async function notifyUserPush({
     });
 
     if (user?.pushToken) {
+      // Automatically compute current unread notifications count for accurate app icon badge
+      const unreadCount = badge !== undefined ? badge : await prisma.userNotification.count({
+        where: { userId, isRead: false }
+      }).catch(() => undefined);
+
       await sendExpoPushNotification({
         pushToken: user.pushToken,
         title,
         body,
         data,
+        channelId,
+        badge: unreadCount,
       });
     }
   } catch (error) {

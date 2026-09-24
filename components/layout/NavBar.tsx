@@ -13,6 +13,7 @@ import {
   IdCard,
   Scale,
   MessageCircle,
+  Users,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
@@ -86,9 +87,9 @@ export default function Navbar({ session }: { session: any }) {
         <nav className="hidden lg:flex items-center gap-8 px-4">
           {[
             { label: "Search", href: "/" },
-            { label: "About Us", href: "/about" },
-            { label: "Careers", href: "/careers" },
+            { label: "Community", href: "/community" },
             { label: "Articles", href: "/blog" },
+            { label: "About Us", href: "/about" },
             { label: "Contact", href: "/contact" },
           ].map((link) => (
             <Link
@@ -205,9 +206,10 @@ export default function Navbar({ session }: { session: any }) {
               <div className="flex flex-col gap-1.5">
                 {[
                   { label: "Search", href: "/", icon: Search },
+                  { label: "Community", href: "/community", icon: Users },
+                  { label: "Articles", href: "/blog", icon: FileText },
                   { label: "About Us", href: "/about", icon: Building2 },
                   { label: "Careers", href: "/careers", icon: IdCard },
-                  { label: "Articles", href: "/blog", icon: FileText },
                   { label: "Contact Us", href: "/contact", icon: Building2 },
                   { label: "Compare Institutes", href: "/compare", icon: Scale },
                 ].map((item) => {

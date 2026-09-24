@@ -90,6 +90,7 @@ export default async function AdminLayout({
         adCount,
         inboundLeadCount,
         unlockCount,
+        pendingBooksCount,
     ] = await Promise.all([
         prisma.instituteClaim.count({ where: { status: "PENDING" } }),
         prisma.review.count({ where: { status: "PENDING" } }),
@@ -119,6 +120,7 @@ export default async function AdminLayout({
         prisma.advertisement.count({ where: { status: "PENDING" } }),
         prisma.inboundLead.count({ where: { status: "NEW" } }),
         prisma.instituteUnlock.count(),
+        prisma.bookListing.count({ where: { status: "PENDING_APPROVAL" } }),
     ]);
 
     // New route counts
@@ -159,6 +161,7 @@ export default async function AdminLayout({
                         <SidebarLink href="/af-ass-manage/life-coach" icon={<LifeBuoy />} label="Life Coach" count={lifeCoachCount} />
                         <SidebarLink href="/af-ass-manage/claims" icon={<FileText />} label="Claim Requests" count={claimCount} />
                         <SidebarLink href="/af-ass-manage/reviews" icon={<Star />} label="Review Requests" count={reviewCount} />
+                        <SidebarLink href="/af-ass-manage/books" icon={<BookOpen />} label="Book Moderation" count={pendingBooksCount} />
                         <SidebarLink href="/af-ass-manage/instituteRequests" icon={<FileType2 />} label="Institute Requests" count={instituteReqCount} />
                         <SidebarLink href="/af-ass-manage/instituteCallbacks" icon={<PhoneCall />} label="Institute Callbacks" count={enquiryCount} />
                         <SidebarLink href="/af-ass-manage/unlocks" icon={<KeyRound />} label="Contact Unlocks" count={unlockCount} />

@@ -101,6 +101,10 @@ model User {
   instituteVisits          InstituteVisit[]
   isVisible                Boolean                   @default(true)
   advertisements           Advertisement[]
+  buddyRequestsSent        BuddyRequest[]            @relation("BuddyRequestsSent")
+  buddyRequestsReceived    BuddyRequest[]            @relation("BuddyRequestsReceived")
+  bookListings             BookListing[]             @relation("SellerBookListings")
+  acquiredBooks            BookListing[]             @relation("BuyerBookListings")
 
   @@map("user")
 }
@@ -158,6 +162,8 @@ enum WalletTransactionSource {
   SEE_TEACHER_PROFILE_BASIC
   VERIFY_MOBILE
   SEE_COMMUNITY_BASIC_INSTITUTE
+  BOOK_LISTED
+  BOOK_DONATED
 }
 
 model WalletTransaction {
@@ -705,14 +711,102 @@ model StudentProfile {
   headline         String?
   bio              String?                  @db.Text
   targetExam       String?
+  targetYear       Int?
   currentClass     String?
+  city             String?
+  locality         String?
+  latitude         Float?
+  longitude        Float?
+  lookingForBuddy  Boolean                  @default(true)
+  preferredMedium  String?                  @default("English")
+  subjects         String[]                 @default([])
   isVisible        Boolean                  @default(true)
   createdAt        DateTime                 @default(now())
   updatedAt        DateTime                 @updatedAt
   user             User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   instituteRecords StudentInstituteRecord[]
 
+  @@index([city])
+  @@index([targetExam])
+  @@index([lookingForBuddy])
   @@map("student_profile")
+}
+
+model BuddyRequest {
+  id          String             @id @default(cuid())
+  senderId    String
+  receiverId  String
+  status      BuddyRequestStatus @default(PENDING)
+  message     String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  sender      User               @relation("BuddyRequestsSent", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver    User               @relation("BuddyRequestsReceived", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, receiverId])
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([status])
+  @@map("buddy_request")
+}
+
+enum BuddyRequestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELLED
+}
+
+model BookListing {
+  id            String            @id @default(cuid())
+  sellerId      String
+  buyerId       String?
+  title         String
+  author        String?
+  instituteName String?
+  examCategory  String?
+  subject       String?
+  condition     BookCondition     @default(LIKE_NEW)
+  price         Int               @default(0)
+  originalPrice Int?
+  isFree        Boolean           @default(false)
+  description   String?           @db.Text
+  images        String[]          @default([])
+  city          String
+  locality      String?
+  status        BookListingStatus @default(PENDING_APPROVAL)
+  rejectionReason String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  seller        User              @relation("SellerBookListings", fields: [sellerId], references: [id], onDelete: Cascade)
+  buyer         User?             @relation("BuyerBookListings", fields: [buyerId], references: [id])
+
+  @@index([sellerId])
+  @@index([buyerId])
+  @@index([city])
+  @@index([examCategory])
+  @@index([status])
+  @@index([price])
+  @@map("book_listing")
+}
+
+enum BookCondition {
+  NEW
+  LIKE_NEW
+  GOOD
+  FAIR
+}
+
+enum BookListingStatus {
+  PENDING_APPROVAL
+  AVAILABLE
+  RESERVED
+  SOLD
+  DONATED
+  REJECTED
+  ARCHIVED
 }
 
 model InstituteMembership {
@@ -830,6 +924,16 @@ model Conversation {
   lastMessageAt  DateTime?
   lastActivityAt DateTime?
   isReadOnly     Boolean                   @default(false)
+  
+  // Study Group Fields
+  isStudyGroup   Boolean                   @default(false)
+  examCategory   String?
+  subject        String?
+  city           String?
+  tags           String[]                  @default([])
+  rules          String?                   @db.Text
+  maxMembers     Int?                      @default(500)
+
   createdAt      DateTime                  @default(now())
   updatedAt      DateTime                  @updatedAt
   institute      Institute?                @relation(fields: [instituteId], references: [id], onDelete: Cascade)
@@ -846,6 +950,9 @@ model Conversation {
   @@index([channelType])
   @@index([lastMessageAt])
   @@index([lastActivityAt])
+  @@index([isStudyGroup])
+  @@index([examCategory])
+  @@index([city])
   @@map("conversation")
 }
 

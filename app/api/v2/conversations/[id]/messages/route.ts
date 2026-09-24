@@ -65,6 +65,12 @@ export async function GET(req: Request, { params }: Params) {
     data: { lastReadAt: new Date() },
   }).catch((err: any) => console.error("Error updating lastReadAt:", err));
 
+  // Mark in-app user notifications for this conversation as read
+  prisma.userNotification.updateMany({
+    where: { userId: session.user.id, entityId: conversationId, isRead: false },
+    data: { isRead: true },
+  }).catch((err: any) => console.error("Error updating notification isRead:", err));
+
   const messages = await prisma.message.findMany({
     where: { conversationId, deletedAt: null },
     orderBy: { createdAt: "desc" },

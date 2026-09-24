@@ -83,6 +83,12 @@ export async function GET(_req: Request, { params }: Params) {
     data: { lastReadAt: new Date() },
   }).catch((err: any) => console.error("Error updating lastReadAt:", err));
 
+  // Mark in-app user notifications for this conversation as read
+  prisma.userNotification.updateMany({
+    where: { userId, entityId: id, isRead: false },
+    data: { isRead: true },
+  }).catch((err: any) => console.error("Error updating notification isRead:", err));
+
   // Override memberCount with the actual active participant count
   const payload = {
     ...conversation,

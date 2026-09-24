@@ -116,11 +116,17 @@ export async function notifyChatParticipants({
     // 5. Send Live Expo Push Notifications to mobile devices
     for (const p of participants) {
       if (p.user?.pushToken) {
+        // Query unread count for this participant so their app icon badge displays accurately
+        const unreadCount = await prisma.userNotification.count({
+          where: { userId: p.userId, isRead: false },
+        }).catch(() => undefined);
+
         sendExpoPushNotification({
           pushToken: p.user.pushToken,
           title,
           body,
           channelId: "chat",
+          badge: unreadCount,
           data: {
             conversationId,
             screen: `/chat/${conversationId}`,
