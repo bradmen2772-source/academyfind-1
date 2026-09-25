@@ -46,7 +46,7 @@ export function FeaturedInstitutesRail({
         </div>
 
         <Link
-          href={`/?q=${encodeURIComponent(examCategory !== "ALL" ? examCategory : "coaching")}`}
+          href="/"
           className="text-xs font-bold text-amber-600 hover:text-amber-700 flex items-center gap-1 shrink-0"
         >
           <span>View All</span>
