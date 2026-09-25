@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { Star, ShieldCheck, MapPin, ArrowRight } from "lucide-react";
+import { Star, ShieldCheck, MapPin, ArrowRight, Sparkles, PhoneCall } from "lucide-react";
 import { CommunityLeadModal } from "@/components/community/CommunityLeadModal";
 import { Button } from "@/components/ui/button";
 import { VerifiedBadge } from "@/components/institutes/VerifiedBadge";
@@ -19,6 +19,8 @@ interface FeaturedInstitutesRailProps {
     reviewCount?: number | null;
     isVerified?: boolean;
     isFeatured?: boolean;
+    subscriptionPlan?: string | null;
+    planWeight?: number | null;
     feeRange?: string | null;
   }>;
   examCategory?: string;
@@ -39,7 +41,7 @@ export function FeaturedInstitutesRail({
             Top Verified Coaching Institutes for {examCategory !== "ALL" ? examCategory : "Students"}
           </h4>
           <p className="text-xs text-slate-500 mt-0.5 font-normal">
-            Verified coaching centers offering batch counseling, demo lectures, and scholarship test dates.
+            Direct admission counselors offering fee guidance, demo lectures, and scholarship test dates.
           </p>
         </div>
 
@@ -68,12 +70,26 @@ export function FeaturedInstitutesRail({
                   )}
                 </div>
 
-                {inst.rating && (
-                  <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 text-[11px] font-bold border border-amber-200">
-                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                    <span>{Number(inst.rating).toFixed(1)}</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {inst.subscriptionPlan === "ULTRA" && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 text-[10px] font-extrabold border border-purple-200 uppercase tracking-wider">
+                      <Sparkles className="w-2.5 h-2.5 text-purple-600" />
+                      Ultra
+                    </span>
+                  )}
+                  {inst.subscriptionPlan === "PREMIUM" && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[10px] font-extrabold border border-amber-200 uppercase tracking-wider">
+                      <Sparkles className="w-2.5 h-2.5 text-amber-600" />
+                      Premium
+                    </span>
+                  )}
+                  {Boolean(inst.rating && inst.rating > 0) && (
+                    <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 text-[11px] font-bold border border-amber-200">
+                      <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                      <span>{Number(inst.rating).toFixed(1)}</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center gap-1.5 min-w-0">
@@ -108,9 +124,10 @@ export function FeaturedInstitutesRail({
                   <Button
                     size="sm"
                     variant="outline"
-                    className="w-full rounded-full text-xs font-semibold border-slate-200 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-800 h-8 transition-colors"
+                    className="w-full rounded-full text-xs font-semibold border-slate-200 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-800 h-8 transition-colors flex items-center justify-center gap-1.5"
                   >
-                    Inquire Admission
+                    <PhoneCall className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Inquire (Request Callback)</span>
                   </Button>
                 }
               />

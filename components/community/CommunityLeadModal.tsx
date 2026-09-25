@@ -93,12 +93,12 @@ export function CommunityLeadModal({
       const res = await submitCommunityLead(formData);
       if (res.success) {
         setSubmitted(true);
-        toast.success(`Counseling request submitted to ${res.instituteName || "institute"}! +20 Coins earned 🎉`);
+        toast.success(`Callback request sent to ${res.instituteName || "institute"}! +20 Coins earned 🎉`);
       } else {
-        toast.error(res.error || "Failed to submit request.");
+        toast.error(res.error || "Failed to submit callback request.");
       }
     } catch (err) {
-      toast.error("Please sign in to request institute counseling.");
+      toast.error("Failed to submit callback request. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -118,7 +118,7 @@ export function CommunityLeadModal({
         {trigger || (
           <Button className="rounded-full bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs gap-1.5 shadow-xs">
             <GraduationCap className="w-4 h-4" />
-            Request Free Counseling
+            Request Free Callback
           </Button>
         )}
       </DialogTrigger>
@@ -129,10 +129,10 @@ export function CommunityLeadModal({
               <CheckCircle2 className="w-8 h-8" />
             </div>
             <DialogTitle className="text-xl font-bold text-slate-900">
-              Inquiry Sent Successfully!
+              Callback Request Sent!
             </DialogTitle>
             <DialogDescription className="text-slate-600 text-sm max-w-sm mx-auto">
-              The admissions counselor at <strong>{activeInstitute?.name || "the coaching center"}</strong> will contact you shortly with batch schedules and fee scholarship details.
+              The admissions desk at <strong>{activeInstitute?.name || "the coaching center"}</strong> has received your callback request and will call you directly on <strong>{phone}</strong> regarding batch schedules, demo classes, and fee structures.
             </DialogDescription>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold">
               <Coins className="w-3.5 h-3.5 text-amber-600" />
@@ -152,10 +152,10 @@ export function CommunityLeadModal({
                 Verified Admissions Partner
               </div>
               <DialogTitle className="text-xl font-bold text-slate-900">
-                Book Free Counseling & Demo Class
+                Request Institute Admission Callback
               </DialogTitle>
               <DialogDescription className="text-slate-600 text-sm">
-                Connect directly with admissions counselors at <strong>{activeInstitute?.name || "top coaching centers"}</strong>.
+                Get a direct callback from admissions counselors at <strong>{activeInstitute?.name || "top coaching centers"}</strong>.
               </DialogDescription>
             </DialogHeader>
 
@@ -273,10 +273,10 @@ export function CommunityLeadModal({
                     {loading ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                        Submitting...
+                        Requesting...
                       </>
                     ) : (
-                      "Submit Inquiry"
+                      "Request Callback"
                     )}
                   </Button>
                 </div>

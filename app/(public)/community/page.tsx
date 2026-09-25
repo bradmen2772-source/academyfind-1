@@ -32,7 +32,7 @@ export const metadata: Metadata = {
 export default async function CommunityHubPage() {
   const [{ groups = [] }, { institutes = [] }] = await Promise.all([
     getStudyGroups({ limit: 6 }),
-    getRelevantInstitutesForCommunity("JEE", "ALL", 4),
+    getRelevantInstitutesForCommunity("ALL", "ALL", 4),
   ]);
 
   return (
