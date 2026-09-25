@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { submitCommunityLead } from "@/lib/community/lead-funnel";
-import { GraduationCap, Sparkles, CheckCircle2, Phone, Coins, Loader2 } from "lucide-react";
+import { GraduationCap, Sparkles, CheckCircle2, Phone, Mail, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface CommunityLeadModalProps {
@@ -35,7 +35,6 @@ interface CommunityLeadModalProps {
 export function CommunityLeadModal({
   institute,
   availableInstitutes = [],
-  defaultExam = "JEE",
   trigger,
 }: CommunityLeadModalProps) {
   const [open, setOpen] = useState(false);
@@ -48,7 +47,6 @@ export function CommunityLeadModal({
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [examCategory, setExamCategory] = useState(defaultExam);
   const [message, setMessage] = useState("");
 
   // Sync selected institute ID if prop changes
@@ -69,6 +67,11 @@ export function CommunityLeadModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!name.trim()) {
+      toast.error("Please enter your full name.");
+      return;
+    }
+
     if (!phone || phone.replace(/\D/g, "").length < 10) {
       toast.error("Please enter a valid 10-digit mobile number.");
       return;
@@ -83,17 +86,16 @@ export function CommunityLeadModal({
     setLoading(true);
     try {
       const formData = new FormData();
-      formData.append("name", name);
+      formData.append("name", name.trim());
       formData.append("phone", phone);
-      formData.append("email", email);
+      formData.append("email", email.trim());
       formData.append("instituteId", targetId);
-      formData.append("examCategory", examCategory);
-      formData.append("message", message);
+      formData.append("message", message.trim());
 
       const res = await submitCommunityLead(formData);
       if (res.success) {
         setSubmitted(true);
-        toast.success(`Callback request sent to ${res.instituteName || "institute"}! +20 Coins earned 🎉`);
+        toast.success(`Callback request sent to ${res.instituteName || "institute"}!`);
       } else {
         toast.error(res.error || "Failed to submit callback request.");
       }
@@ -122,7 +124,7 @@ export function CommunityLeadModal({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[480px] p-6 rounded-2xl">
+      <DialogContent className="sm:max-w-[460px] p-6 rounded-2xl">
         {submitted ? (
           <div className="text-center py-6 space-y-4">
             <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
@@ -132,12 +134,8 @@ export function CommunityLeadModal({
               Callback Request Sent!
             </DialogTitle>
             <DialogDescription className="text-slate-600 text-sm max-w-sm mx-auto">
-              The admissions desk at <strong>{activeInstitute?.name || "the coaching center"}</strong> has received your callback request and will call you directly on <strong>{phone}</strong> regarding batch schedules, demo classes, and fee structures.
+              The admissions desk at <strong>{activeInstitute?.name || "the coaching center"}</strong> has received your callback request and will call you directly on <strong>{phone}</strong> regarding admissions, batch schedules, and fee details.
             </DialogDescription>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold">
-              <Coins className="w-3.5 h-3.5 text-amber-600" />
-              +20 AcademyFind Coins credited to your wallet
-            </div>
             <div className="pt-3">
               <Button onClick={handleClose} className="rounded-full bg-slate-900 text-white font-semibold px-6">
                 Back to Community
@@ -202,45 +200,33 @@ export function CommunityLeadModal({
                   type="tel"
                   placeholder="10-digit mobile number"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
                   required
                   maxLength={10}
                   className="rounded-xl border-slate-200"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold text-slate-700">Target Exam</Label>
-                  <select
-                    value={examCategory}
-                    onChange={(e) => setExamCategory(e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-amber-500"
-                  >
-                    {["JEE", "NEET", "UPSC", "CAT", "GATE", "CUET", "FOUNDATION"].map((ex: string) => (
-                      <option key={ex} value={ex}>
-                        {ex}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold text-slate-700">Email Address</Label>
-                  <Input
-                    type="email"
-                    placeholder="name@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="rounded-xl border-slate-200 text-xs"
-                  />
-                </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                  <Mail className="w-3.5 h-3.5 text-slate-400" />
+                  Email Address <span className="text-slate-400 font-normal">(Optional)</span>
+                </Label>
+                <Input
+                  type="email"
+                  placeholder="name@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="rounded-xl border-slate-200 text-xs"
+                />
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs font-semibold text-slate-700">Specific Query or Batch Preference</Label>
+                <Label className="text-xs font-semibold text-slate-700">
+                  Your Query / Target Course <span className="text-slate-400 font-normal">(Optional)</span>
+                </Label>
                 <Textarea
-                  placeholder="e.g. Inquiring for 2026 Dropper batch fees, scholarship test dates, or hostel facilities..."
+                  placeholder="e.g. Inquiring for JEE 2026 dropper batch fees, scholarship test dates, or demo class..."
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   rows={2}
@@ -249,37 +235,30 @@ export function CommunityLeadModal({
                 />
               </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                <div className="flex items-center gap-1 text-amber-600 text-xs font-semibold">
-                  <Coins className="w-3.5 h-3.5" />
-                  Earn +20 Coins
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setOpen(false)}
-                    disabled={loading}
-                    className="rounded-xl"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={loading}
-                    className="rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold"
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                        Requesting...
-                      </>
-                    ) : (
-                      "Request Callback"
-                    )}
-                  </Button>
-                </div>
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setOpen(false)}
+                  disabled={loading}
+                  className="rounded-xl text-xs"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs px-5"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                      Requesting...
+                    </>
+                  ) : (
+                    "Request Callback"
+                  )}
+                </Button>
               </div>
             </form>
           </>

@@ -5,7 +5,6 @@ import { getSession } from "@/lib/auth/getSession";
 import { requireAuth } from "@/lib/auth/requireAuth";
 import { validateIndianPhoneNumber } from "@/lib/phone-validation";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { creditWallet } from "@/lib/wallet/credit";
 import { triggerCRMWebhooks } from "@/lib/crm/webhooks";
 import { notifyAdminsPush, sendExpoPushNotification } from "@/lib/pushNotifications";
 import { sendEmail } from "@/lib/notifications/email";
@@ -112,9 +111,8 @@ export async function submitCommunityLead(formData: FormData) {
     const phoneInput = (formData.get("phone") as string) || (session?.user as any)?.phone || "";
     const email = ((formData.get("email") as string) || session?.user?.email || "").trim() || null;
     const instituteId = formData.get("instituteId") as string;
-    const examCategory = (formData.get("examCategory") as string) || "General";
     const studyGroupId = (formData.get("studyGroupId") as string) || null;
-    const customMessage = (formData.get("message") as string) || "";
+    const customMessage = ((formData.get("message") as string) || "").trim();
 
     if (!name || !instituteId) {
       return { success: false, error: "Name and target coaching center are required." };
@@ -127,9 +125,7 @@ export async function submitCommunityLead(formData: FormData) {
     }
     const phone = phoneResult.cleanedPhone!;
 
-    const formattedMessage = customMessage
-      ? `[Admission Callback - ${examCategory}] ${customMessage}`
-      : `Requested direct admission callback for ${examCategory}. Submitted via AcademyFind Community.`;
+    const message = customMessage || "Requested direct admission callback.";
 
     // 1. Create official Institute Enquiry (Callback)
     const enquiry = await prisma.instituteEnquiry.create({
@@ -138,14 +134,13 @@ export async function submitCommunityLead(formData: FormData) {
         phone,
         email,
         instituteId,
-        message: formattedMessage,
+        message,
         status: "NEW",
         source: "COMMUNITY_ADMISSION_CALLBACK",
         sourceDetails: {
           type: "INSTITUTE_CALLBACK",
           submittedByUserId: session?.user?.id || null,
-          source: "COMMUNITY_STUDY_GROUP",
-          examCategory,
+          source: "COMMUNITY_HUB",
           studyGroupId,
         },
       },
@@ -161,7 +156,7 @@ export async function submitCommunityLead(formData: FormData) {
       data: {
         type: "NEW_INSTITUTE_ENQUIRY",
         title: "New Institute Callback",
-        message: `${name} (${phone}) requested admission callback for institute: ${enquiry.institute.name} via Community (${examCategory})`,
+        message: `${name} (${phone}) requested admission callback for institute: ${enquiry.institute.name} via Community`,
       },
     }).catch(() => null);
 
@@ -199,7 +194,7 @@ export async function submitCommunityLead(formData: FormData) {
             `Your Admission Callback Request for ${instituteName} - AcademyFind`,
             `<p>Hi ${name} 👋</p>
             <p>Thank you for using AcademyFind! 🎓</p>
-            <p>Your admission callback request for <strong>${instituteName}</strong> has been sent to their admissions counselor desk. They have been requested to call you back shortly regarding ${examCategory} batches, trial lectures, and fee structures.</p>
+            <p>Your admission callback request for <strong>${instituteName}</strong> has been sent to their admissions counselor desk. They have been requested to call you back shortly regarding admission guidance, trial lectures, and fee structures.</p>
             <p><em>Haven’t heard back?</em> Reply to this email and the AcademyFind team will assist you.</p>
             <br/>
             <p>Team AcademyFind<br/>🌐 www.academyfind.com<br/>📞 9045699938</p>`
@@ -216,8 +211,7 @@ export async function submitCommunityLead(formData: FormData) {
             <p><strong>Student Name:</strong> ${name}</p>
             <p><strong>Contact Phone:</strong> <a href="tel:${phone}">${phone}</a></p>
             ${email ? `<p><strong>Email:</strong> ${email}</p>` : ""}
-            <p><strong>Target Exam / Course:</strong> ${examCategory}</p>
-            <p><strong>Message / Requirement:</strong> ${customMessage || "Interested in admission counseling, demo batches, and fee details."}</p>
+            <p><strong>Student Query:</strong> ${customMessage || "Interested in admission counseling, demo batches, and fee details."}</p>
             <br/>
             <p>Please contact ${name} promptly to assist them with admission guidance.</p>
             <p>🔗 <a href="${institutePageLink}">View Your Profile on AcademyFind</a></p>
@@ -237,7 +231,7 @@ export async function submitCommunityLead(formData: FormData) {
             sendExpoPushNotification({
               pushToken: manager.user.pushToken,
               title: `📞 New Admission Callback: ${name}`,
-              body: `${name} (${phone}) requested callback for ${examCategory} at ${instituteName}.`,
+              body: `${name} (${phone}) requested callback for ${instituteName}.`,
               data: { screen: '(manager)', instituteId },
             }).catch((err) => console.error("Manager push error:", err));
           }
@@ -246,17 +240,6 @@ export async function submitCommunityLead(formData: FormData) {
         console.error("Async callback notification error:", asyncErr);
       }
     })();
-
-    // 6. Reward student with +20 AcademyFind coins for requesting admission callback (if logged in)
-    if (session?.user?.id) {
-      await creditWallet(
-        session.user.id,
-        20,
-        "COMPLETE_PROFILE",
-        `Earned 20 coins for requesting admission callback at ${enquiry.institute.name}`,
-        enquiry.id
-      ).catch(() => null);
-    }
 
     revalidatePath("/community");
     revalidatePath("/community/groups");
