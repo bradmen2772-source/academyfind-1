@@ -16,7 +16,11 @@ export async function GET() {
   }
 
   const count = await prisma.userNotification.count({
-    where: { userId: session.user.id, isRead: false },
+    where: {
+      userId: session.user.id,
+      isRead: false,
+      type: { not: "MESSAGE" },
+    },
   });
   return NextResponse.json({ count });
 }

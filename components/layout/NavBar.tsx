@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import UserDropdown from "@/components/navigation/UserDropdown";
 import { NotificationBell } from "@/components/layout/NotificationBell";
+import { ChatNavButton } from "@/components/layout/ChatNavButton";
 import { buildAuthHref } from "@/lib/auth/redirect-utils";
 
 export default function Navbar({ session }: { session: any }) {
@@ -150,13 +151,7 @@ export default function Navbar({ session }: { session: any }) {
             {session?.user ? (
               <>
                 <NotificationBell />
-                <Link
-                  href="/chat"
-                  title="Messages"
-                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-800"
-                >
-                  <MessageCircle className="size-4" />
-                </Link>
+                <ChatNavButton />
                 <UserDropdown user={session.user} />
               </>
             ) : (
@@ -179,8 +174,14 @@ export default function Navbar({ session }: { session: any }) {
           </div>
         </div>
 
-        {/* Mobile Menu Trigger */}
-        <div className="lg:hidden">
+        {/* Mobile Header Actions & Menu Trigger */}
+        <div className="flex lg:hidden items-center gap-2">
+          {session?.user && (
+            <>
+              <NotificationBell />
+              <ChatNavButton />
+            </>
+          )}
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="rounded-xl hover:bg-slate-50">

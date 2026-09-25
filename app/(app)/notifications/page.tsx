@@ -56,7 +56,10 @@ export default async function NotificationsPage() {
     }));
   } else {
     const userNotifications = await prisma.userNotification.findMany({
-      where: { userId: session.user.id },
+      where: {
+        userId: session.user.id,
+        type: { not: "MESSAGE" },
+      },
       orderBy: { createdAt: "desc" },
       take: 100,
       select: {

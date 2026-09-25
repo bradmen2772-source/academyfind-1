@@ -27,15 +27,26 @@ export default function UserDropdown({ user }: { user: any }) {
     managedInstitute: null as any,
     hasIsmAssignment: false,
     pendingIsmInvites: [] as Array<{ id: string; institute?: { id: string; name: string } }>,
+    unreadMessages: 0,
   });
 
   // 🚀 BACKGROUND FETCH: Background me chupke se fresh database records laao
   useEffect(() => {
     async function fetchFreshPermissions() {
       try {
-        const res = await fetch("/api/user/me");
-        if (res.ok) {
-          const data = await res.json();
+        const [userRes, msgRes] = await Promise.all([
+          fetch("/api/user/me"),
+          fetch("/api/v2/conversations/unread-count").catch(() => null),
+        ]);
+
+        let unreadMsgs = 0;
+        if (msgRes && msgRes.ok) {
+          const msgData = await msgRes.json();
+          unreadMsgs = msgData.count || 0;
+        }
+
+        if (userRes.ok) {
+          const data = await userRes.json();
           if (data.authenticated) {
             setLiveUserData({
               role: data.role,
@@ -45,6 +56,7 @@ export default function UserDropdown({ user }: { user: any }) {
               managedInstitute: data.managedInstitutes?.[0]?.institute || null,
               hasIsmAssignment: (data.ismAssignments?.length ?? 0) > 0,
               pendingIsmInvites: data.ismInvitesReceived || [],
+              unreadMessages: unreadMsgs,
             });
           }
         }
@@ -159,9 +171,16 @@ export default function UserDropdown({ user }: { user: any }) {
         </DropdownMenuItem>
 
         <DropdownMenuItem asChild className="rounded-xl cursor-pointer py-3 px-3 focus:bg-amber-50 focus:text-amber-700 transition-colors">
-          <Link href="/chat">
-            <MessageCircle className="mr-3 h-4 w-4" />
-            <span className="font-medium text-sm">Messages</span>
+          <Link href="/chat" className="flex items-center justify-between w-full">
+            <div className="flex items-center">
+              <MessageCircle className="mr-3 h-4 w-4" />
+              <span className="font-medium text-sm">Messages</span>
+            </div>
+            {liveUserData.unreadMessages > 0 && (
+              <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 text-[10px] font-bold text-white shadow-xs">
+                {liveUserData.unreadMessages > 99 ? "99+" : liveUserData.unreadMessages}
+              </span>
+            )}
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild className="rounded-xl cursor-pointer py-3 px-3 focus:bg-amber-50 focus:text-amber-700 transition-colors">

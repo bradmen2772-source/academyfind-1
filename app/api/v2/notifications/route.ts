@@ -30,7 +30,10 @@ export async function GET() {
 
 
   const notifications = await prisma.userNotification.findMany({
-    where: { userId: session.user.id },
+    where: {
+      userId: session.user.id,
+      type: { not: "MESSAGE" },
+    },
     orderBy: { createdAt: "desc" },
     take: 20,
     select: {
@@ -63,7 +66,11 @@ export async function PATCH(req: Request) {
       });
     } else {
       await prisma.userNotification.updateMany({
-        where: { userId: session.user.id, isRead: false },
+        where: {
+          userId: session.user.id,
+          isRead: false,
+          type: { not: "MESSAGE" },
+        },
         data: { isRead: true },
       });
     }
